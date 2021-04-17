@@ -31,7 +31,8 @@ contract Inventory {
         uint sentTimestamp,
         uint receivedTimestamp,
         string beneficiary,
-        uint[] resources
+        uint[] resources,
+        uint statusCode
     );
 
     event AckTxn(
@@ -70,7 +71,7 @@ contract Inventory {
         resourceTxns[txnId] = rtx;
         string memory beneficiary = _beneficiary;
         statusCode = 200;
-        emit newTxn(rtx.id, msg.sender, rtx.fromEntity, rtx.fromEntity, rtx.toEntity, rtx.entityLevel, rtx.sentTimestamp, rtx.receivedTimestamp, beneficiary, rtx.resourceQuantities);
+        emit newTxn(rtx.id, msg.sender, rtx.fromEntity, rtx.fromEntity, rtx.toEntity, rtx.entityLevel, rtx.sentTimestamp, rtx.receivedTimestamp, beneficiary, rtx.resourceQuantities, statusCode);
         return (statusCode,txnId);
     }
     

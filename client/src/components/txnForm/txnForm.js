@@ -6,7 +6,7 @@ import InputLabel from "@material-ui/core/InputLabel";
 import Select from "@material-ui/core/Select";
 import FormControl from "@material-ui/core/FormControl";
 import FormControlLabel from "@material-ui/core/FormControlLabel";
-import { Button, Checkbox, Grid, TextField } from "@material-ui/core";
+import { Button, Checkbox, Grid, TextField, Snackbar } from "@material-ui/core";
 import "./txnForm.css";
 import Loader from "../../loader.gif";
 
@@ -21,7 +21,7 @@ export default function TxnForm(props) {
     checkedList: [],
     checkedCount: 0,
   });
-
+  const [snackbarView, setSnackbarView] = useState(false);
   const levels = ["Central", "State", "District", "Distn. Point"];
   const entities = [props.states, props.districts, props.dstnPoints];
   const storageListNames = ["_districtIds", "_dstnPointId", "_beneficiaries"];
@@ -113,16 +113,16 @@ export default function TxnForm(props) {
         }
       );
       setLoading(false);
-
+      console.log(txnResult);
       const txnId = txnResult.logs[0].args.txnId;
       const statusCode = txnResult.logs[0].args.statusCode;
-      if (statusCode === 200) {
-        const txnDetails = await inventoryContractInstance.resourceTxns(txnId);
-        const txnResources = await inventoryContractInstance.getTxnResources(
-          txnId
-        );
-        console.log(txnDetails, txnResources);
-      } else window.alert("unauth");
+      // if (statusCode === 200) {
+      //   const txnDetails = await inventoryContractInstance.resourceTxns(txnId);
+      //   const txnResources = await inventoryContractInstance.getTxnResources(
+      //     txnId
+      //   );
+      //   console.log(txnDetails, txnResources);
+      // } else window.alert("unauth");
     })();
   };
 
