@@ -9,7 +9,6 @@ contract Inventory {
         bytes32 id;
         address initiator;
         address receiver;
-        string beneficiary;
         string fromEntity; 
         string toEntity; 
         string entityLevel; 
@@ -30,7 +29,6 @@ contract Inventory {
         string indexed entityLevel,
         uint sentTimestamp,
         uint receivedTimestamp,
-        string beneficiary,
         uint[] resources,
         uint statusCode
     );
@@ -42,36 +40,30 @@ contract Inventory {
     );
     
     
-    function sendTxn(string memory _beneficiary, string memory _fromEntity, uint _fromEntityId, string memory _toEntity, string memory _level, uint  _sentTimestamp, uint _receivedTimestamp, uint[] memory _resourceQuantities, address _credManagerAddress) public returns(uint,bytes32){
+    function sendTxn(string memory _fromEntity, uint _fromEntityId, string memory _toEntity, string memory _level, uint  _sentTimestamp, uint _receivedTimestamp, uint[] memory _resourceQuantities, address _credManagerAddress) public returns(uint,bytes32){
         
         CredentialManager cm = CredentialManager(_credManagerAddress);
         uint statusCode;
         bytes32 txnId;
         if(!cm.authorizeSigner(_level, msg.sender, _fromEntityId))
-        {
             statusCode = 401;
-            txnId = "";
-            return (statusCode, txnId);
-        }
+        else
+            statusCode = 200;
         require(bytes(_fromEntity).length>0, "Invalid fromEntity");
         txnId = keccak256(abi.encode(_fromEntity,_toEntity,_level,_sentTimestamp));
         resourceTransaction memory rtx;
         rtx.id = txnId;
         rtx.initiator = msg.sender;
-        if(keccak256(bytes(_fromEntity)) == keccak256(bytes("distribution")))
-        rtx.beneficiary = _beneficiary;
         rtx.fromEntity = _fromEntity;
         rtx.toEntity = _toEntity;
         rtx.entityLevel = _level;
         rtx.sentTimestamp = _sentTimestamp;
-        if(keccak256(bytes(_fromEntity)) == keccak256(bytes("distribution")))
+        if(keccak256(bytes(_fromEntity)) == keccak256(bytes("Distn. Point")))
         rtx.receivedTimestamp = _receivedTimestamp;
         rtx.created = true;
         rtx.resourceQuantities = _resourceQuantities;
         resourceTxns[txnId] = rtx;
-        string memory beneficiary = _beneficiary;
-        statusCode = 200;
-        emit newTxn(rtx.id, msg.sender, rtx.fromEntity, rtx.fromEntity, rtx.toEntity, rtx.entityLevel, rtx.sentTimestamp, rtx.receivedTimestamp, beneficiary, rtx.resourceQuantities, statusCode);
+        emit newTxn(rtx.id, msg.sender, rtx.fromEntity, rtx.fromEntity, rtx.toEntity, rtx.entityLevel, rtx.sentTimestamp, rtx.receivedTimestamp, rtx.resourceQuantities, statusCode);
         return (statusCode,txnId);
     }
     

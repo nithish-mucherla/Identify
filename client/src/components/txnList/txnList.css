@@ -1,4 +1,4 @@
-.txnList {
+.txnListContainer {
   padding: 20px;
   font-family: "Lato";
   color: white;
@@ -12,17 +12,24 @@
   padding: 10px 0;
 }
 
-.MuiPaper-root {
-  background-color: #3f8f74 !important;
-}
-
 .txnListLoader {
   padding-top: 25vh;
   text-align: center;
 }
 
+.txnItemContainer {
+  margin: 10px 0;
+}
 .filterChip {
   padding: 5px !important;
   margin: 5px !important;
   font-family: "Lato" !important;
+}
+
+@media only screen and (orientation: landscape) {
+  .txnListContainer {
+    padding: 100px;
+    font-family: "Lato";
+    color: white;
+  }
 }

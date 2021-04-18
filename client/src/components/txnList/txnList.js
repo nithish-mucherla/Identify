@@ -16,6 +16,7 @@ import {
   DialogTitle,
   Chip,
   DialogContentText,
+  Paper,
 } from "@material-ui/core";
 import "./txnList.css";
 import Loader from "../../loader.gif";
@@ -138,7 +139,7 @@ function TxnList(props) {
 
   const EntityLevelOptions = () => {
     const options = [];
-    const entityLevels = ["central", ...levels];
+    const entityLevels = ["Central", ...levels];
     for (let level of entityLevels)
       options.push(
         <Chip
@@ -169,20 +170,25 @@ function TxnList(props) {
       return txnList.map((txn) => {
         const val = txn.returnValues;
         return (
-          <TxnItem
-            txnId={val.txnId}
-            key={val.txnId}
-            fromEntity={val.fromEntity}
-            toEntity={val.toEntity}
-            initiator={val.initiator}
-            sent={val.sentTimestamp}
-          />
+          <Paper className="txnItemContainer" key={val.txnId}>
+            <TxnItem
+              key={val.txnId}
+              txnId={val.txnId}
+              fromEntity={val.fromEntity}
+              toEntity={val.toEntity}
+              initiator={val.initiator}
+              sent={val.sentTimestamp}
+              recvd={val.rereceivedTimestamp}
+              statusCode={val.statusCode}
+              level={val.entityLevel}
+            />
+          </Paper>
         );
       });
     return <h3>No txns found</h3>;
   };
   return (
-    <Grid container className="txnList" direction="column">
+    <Grid container className="txnListContainer" direction="column">
       <Grid item>
         <Button
           className="buttonPrimary"
@@ -196,6 +202,11 @@ function TxnList(props) {
         open={dialogView}
         onClose={() => setDialogView(false)}
         className="dialog"
+        PaperProps={{
+          style: {
+            backgroundColor: "#3f8f74",
+          },
+        }}
       >
         <DialogTitle>Filters</DialogTitle>
         <DialogContent>
@@ -215,7 +226,7 @@ function TxnList(props) {
                       isSet: true,
                       central: prevFilter.fromEntity.central[0]
                         ? []
-                        : ["central"],
+                        : ["Central"],
                     },
                   };
                 })

@@ -4,6 +4,8 @@ import "./txnItem.css";
 import { Grid } from "@material-ui/core";
 function TxnItem(props) {
   const sentDate = new Date(parseInt(props.sent)).toLocaleString();
+  const recvdDate =
+    props.recvd === "0" ? 0 : new Date(parseInt(props.recvd)).toLocaleString();
   return (
     <Grid container alignItems="center" className="txnItem">
       <Grid item xs={2}>
@@ -17,16 +19,20 @@ function TxnItem(props) {
         />
       </Grid>
       <Grid container item direction="column" xs={10}>
-        <Grid item>{props.fromEntity}</Grid>
-        <Grid item>{props.toEntity}</Grid>
+        <Grid item>From Entity: {props.fromEntity}</Grid>
+        <Grid item>To Entity: {props.toEntity}</Grid>
         <Grid item>
+          Txn Initiator:
           <span title={props.initiator}>
             {props.initiator.substring(0, 13) +
               "..." +
               props.initiator.substring(23)}
           </span>
-          <br /> {sentDate}
+          <br /> Sent timestamp: {sentDate}
+          <br /> Received timestamp: {recvdDate}
         </Grid>
+        <Grid item>EntityLevel: {props.level}</Grid>
+        <Grid item>txn Status: {props.statusCode}</Grid>
       </Grid>
     </Grid>
   );

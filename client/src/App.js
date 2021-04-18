@@ -24,11 +24,6 @@ const App = () => {
       const credManagerContract = TruffleContract(CredManager);
       credManagerContract.setProvider(web3.eth.currentProvider);
       const credManagerInstance = await credManagerContract.deployed();
-      const accounts = await window.ethereum.request({
-        method: "eth_requestAccounts",
-      });
-      console.log(accounts[0]);
-      console.log(credManagerInstance.address);
       loadData(credManagerInstance, "NewState", setStates);
       loadData(credManagerInstance, "NewDistrict", setDistricts);
       loadData(credManagerInstance, "NewDstnPoint", setDstnPoints);
@@ -98,17 +93,37 @@ const App = () => {
   const theme = createMuiTheme({
     palette: {
       primary: {
-        main: "#ffffff",
-        light: "#fff",
-        dark: "#000",
-        contrastText: "#fff",
+        main: "#000",
       },
-      text: {
-        primary: "#fff",
-        secondary: "ffffffde",
-        light: "#000",
-        dark: "#fff",
-        hint: "#ffffffc6",
+      secondary: {
+        main: "#fff",
+      },
+    },
+    typography: {
+      fontFamily: "Lato",
+    },
+    props: {
+      MuiSelect: {
+        color: "secondary",
+      },
+      MuiInputLabel: {
+        color: "secondary",
+      },
+      MuiTextField: {
+        color: "secondary",
+      },
+    },
+    overrides: {
+      MuiFormLabel: {
+        root: {
+          letterSpacing: "0.05em",
+        },
+      },
+      MuiInputBase: {
+        input: {
+          letterSpacing: "0.03em",
+          color: "#000",
+        },
       },
     },
   });
@@ -154,13 +169,13 @@ const App = () => {
     const accounts = await window.ethereum.request({
       method: "eth_requestAccounts",
     });
-    await credManagerInst.addState([0, 1], accounts[0], {
+    await credManagerInst.addState([0, 1], stateAuthIds[0], {
       from: accounts[0],
     });
-    await credManagerInst.addState([2, 3], accounts[0], {
+    await credManagerInst.addState([2, 3], stateAuthIds[1], {
       from: accounts[0],
     });
-    await credManagerInst.addState([4], accounts[0], {
+    await credManagerInst.addState([4], stateAuthIds[2], {
       from: accounts[0],
     });
   };
@@ -189,9 +204,9 @@ const App = () => {
             </Button>
           </Grid>
           {/* <Button onClick={() => createUsers()}>Add Users</Button> */}
-          {/* <Button onClick={() => addDstnPoints()}>Add dntnPoints</Button> */}
-          {/* <Button onClick={() => addDistricts()}>Add Districts</Button> */}
-          <Button onClick={() => addStates()}>Add states</Button>
+          {/* <Button onClick={() => addDstnPoints()}>Add dntnPoints</Button>
+          <Button onClick={() => addDistricts()}>Add Districts</Button>
+          <Button onClick={() => addStates()}>Add states</Button> */}
         </Grid>
       );
     else if (view === "txnForm")
