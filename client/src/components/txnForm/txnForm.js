@@ -16,6 +16,7 @@ import {
 } from "@material-ui/core";
 import "./txnForm.css";
 import Loader from "../../loader.gif";
+import Nav from "../nav/nav.js";
 
 export default function TxnForm(props) {
   const [resourceList, setResourceList] = useState([]);
@@ -118,37 +119,38 @@ export default function TxnForm(props) {
       //   }
       // );
 
-      const txnResult = await inventoryContractInstance.sendTxn(
-        fromEntity,
-        parseInt(form.fromEntity),
-        toEntity,
-        levels[form.entityLevel],
-        sentTimestamp,
-        recvdTimestamp,
-        form.resourceQuantities,
-        props.credManagerInstance.address,
-        {
-          from: accounts[0],
-        }
-      );
+      // const txnResult = await inventoryContractInstance.sendTxn(
+      //   fromEntity,
+      //   parseInt(form.fromEntity),
+      //   toEntity,
+      //   levels[form.entityLevel],
+      //   sentTimestamp,
+      //   recvdTimestamp,
+      //   form.resourceQuantities,
+      //   props.credManagerInstance.address,
+      //   {
+      //     from: accounts[0],
+      //   }
+      // );
 
+      console.log(levels[form.entityLevel]);
       setLoading(false);
 
-      const txnId = txnResult.logs[0].args.txnId;
-      const _statusCode = txnResult.logs[0].args.statusCode;
+      // const txnId = txnResult.logs[0].args.txnId;
+      // const _statusCode = txnResult.logs[0].args.statusCode;
 
-      console.log(_statusCode);
+      // console.log(_statusCode);
 
-      if (_statusCode.toNumber() === 200)
-        setSuccessSnack({
-          view: true,
-          msg: `Txn successful with txnId: ${txnId}`,
-        });
-      else if (_statusCode.toNumber() === 401)
-        setErrorSnack({
-          view: true,
-          msg: `Unauthorized txn request.`,
-        });
+      // if (_statusCode.toNumber() === 200)
+      //   setSuccessSnack({
+      //     view: true,
+      //     msg: `Txn successful with txnId: ${txnId}`,
+      //   });
+      // else if (_statusCode.toNumber() === 401)
+      //   setErrorSnack({
+      //     view: true,
+      //     msg: `Unauthorized txn request.`,
+      //   });
     })();
   };
 
@@ -313,39 +315,50 @@ export default function TxnForm(props) {
 
   if (!loading)
     return (
-      <Grid container className="txnFormContainer">
-        <Grid item container alignItems="center" direction="column">
+      <>
+        <Grid container direction="column" alignItems="center">
           <Grid item>
-            <EntityLevelFormControl /> <br /> <br />
+            <Nav setView={props.setView} />
           </Grid>
-          {form.entityLevel && (
-            <>
-              <Grid item>
-                <FromEntityFormControl /> <br /> <br />
-              </Grid>
-              <Grid item>
-                <ToEntityFormControl /> <br /> <br />
-              </Grid>
-            </>
-          )}
-          {form.entityLevel && (
-            <>
-              <Grid item>
-                <br />
-                Select Resources
-              </Grid>
-              <Grid item container className="checkBoxContainer">
-                {CheckBoxContainer()}
-              </Grid>
-            </>
-          )}
-          <Grid item>
-            <Button
-              onClick={() => handleTransactionSubmit()}
-              className="buttonPrimary"
-            >
-              send resources
-            </Button>
+          <Grid
+            item
+            container
+            className="txnFormContainer"
+            direction="column"
+            alignItems="center"
+          >
+            <Grid item>
+              <EntityLevelFormControl /> <br /> <br />
+            </Grid>
+            {form.entityLevel && (
+              <>
+                <Grid item>
+                  <FromEntityFormControl /> <br /> <br />
+                </Grid>
+                <Grid item>
+                  <ToEntityFormControl /> <br /> <br />
+                </Grid>
+              </>
+            )}
+            {form.entityLevel && (
+              <>
+                <Grid item>
+                  <br />
+                  Select Resources
+                </Grid>
+                <Grid item container className="checkBoxContainer">
+                  {CheckBoxContainer()}
+                </Grid>
+              </>
+            )}
+            <Grid item>
+              <Button
+                onClick={() => handleTransactionSubmit()}
+                className="buttonPrimary"
+              >
+                send resources
+              </Button>
+            </Grid>
           </Grid>
         </Grid>
         <Snackbar
@@ -372,7 +385,7 @@ export default function TxnForm(props) {
         >
           <SnackbarContent className="error" message={errorSnack.msg} />
         </Snackbar>
-      </Grid>
+      </>
     );
 
   return <img src={Loader} alt="loader" className="loader" />;

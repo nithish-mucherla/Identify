@@ -8,7 +8,7 @@
 }
 
 .MuiFormControl-root {
-  width: 50vw !important;
+  width: 55vw !important;
 }
 
 .para {
@@ -21,9 +21,9 @@
 }
 
 .txnFormContainer {
-  padding-top: 5vh;
-  font-family: "Lato";
-  color: white;
+  padding: 5vh 0 10vh 0 !important;
+  font-family: "Lato" !important;
+  color: white !important;
 }
 
 .checkBoxContainer {
@@ -61,8 +61,8 @@
   }
 
   .txnFormContainer {
-    padding-top: 4vw;
-    font-family: "Lato";
-    color: white;
+    padding: 4vw 4vw !important;
+    font-family: "Lato" !important;
+    color: white !important;
   }
 }

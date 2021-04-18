@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import getWeb3 from "./getWeb3";
 import { Button, Grid } from "@material-ui/core";
-
+import Loader from "./loader.gif";
 import "./App.css";
 import TxnForm from "./components/txnForm/txnForm";
 import { ThemeProvider, createMuiTheme } from "@material-ui/core/styles";
@@ -20,6 +20,7 @@ const App = () => {
 
   useEffect(() => {
     (async () => {
+      setLoading(true);
       const web3 = await getWeb3();
       const credManagerContract = TruffleContract(CredManager);
       credManagerContract.setProvider(web3.eth.currentProvider);
@@ -29,6 +30,7 @@ const App = () => {
       loadData(credManagerInstance, "NewDstnPoint", setDstnPoints);
       setWeb3(web3);
       setCredManagerInst(credManagerInstance);
+      setLoading(false);
     })();
   }, []);
 
@@ -187,22 +189,31 @@ const App = () => {
           <Grid item className="headerContainer">
             <h1 className="header">identify</h1>
           </Grid>
-          <Grid item>
-            <Button
-              className="buttonPrimary"
-              onClick={() => setView("txnForm")}
-            >
-              Send Resources
-            </Button>
-          </Grid>
-          <Grid item>
-            <Button
-              className="buttonPrimary"
-              onClick={() => setView("txnList")}
-            >
-              View Transactions
-            </Button>
-          </Grid>
+          {loading ? (
+            <Grid item className="appLoader">
+              <img src={Loader} alt="loader" />
+            </Grid>
+          ) : (
+            <>
+              <Grid item>
+                <Button
+                  className="buttonPrimary"
+                  onClick={() => setView("txnForm")}
+                >
+                  Send Resources
+                </Button>
+              </Grid>
+              <Grid item>
+                <Button
+                  className="buttonPrimary"
+                  onClick={() => setView("txnList")}
+                >
+                  View Transactions
+                </Button>
+              </Grid>
+            </>
+          )}
+
           {/* <Button onClick={() => createUsers()}>Add Users</Button> */}
           {/* <Button onClick={() => addDstnPoints()}>Add dntnPoints</Button>
           <Button onClick={() => addDistricts()}>Add Districts</Button>

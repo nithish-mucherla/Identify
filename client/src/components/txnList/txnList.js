@@ -21,6 +21,7 @@ import {
 import "./txnList.css";
 import Loader from "../../loader.gif";
 import keccak256 from "keccak256";
+import Nav from "../nav/nav.js";
 
 function TxnList(props) {
   const [txnList, setTxnList] = useState([]);
@@ -166,7 +167,7 @@ function TxnList(props) {
     return options;
   };
   const List = () => {
-    if (TxnList.length > 0)
+    if (txnList.length > 0)
       return txnList.map((txn) => {
         const val = txn.returnValues;
         return (
@@ -178,7 +179,7 @@ function TxnList(props) {
               toEntity={val.toEntity}
               initiator={val.initiator}
               sent={val.sentTimestamp}
-              recvd={val.rereceivedTimestamp}
+              recvd={val.receivedTimestamp}
               statusCode={val.statusCode}
               level={val.entityLevel}
             />
@@ -188,16 +189,13 @@ function TxnList(props) {
     return <h3>No txns found</h3>;
   };
   return (
-    <Grid container className="txnListContainer" direction="column">
-      <Grid item>
-        <Button
-          className="buttonPrimary"
-          startIcon={<FilterListIcon />}
-          onClick={() => setDialogView(true)}
-        >
-          Filters
-        </Button>
+    <Grid container direction="column">
+      <Grid item container direction="column" alignItems="center">
+        <Grid item>
+          <Nav setView={props.setView} />
+        </Grid>
       </Grid>
+
       <Dialog
         open={dialogView}
         onClose={() => setDialogView(false)}
@@ -279,7 +277,18 @@ function TxnList(props) {
           <img src={Loader} alt="loader" />
         </Grid>
       ) : (
-        <List />
+        <Grid container className="txnListContainer" direction="column">
+          <Grid item>
+            <Button
+              className="buttonPrimary"
+              startIcon={<FilterListIcon />}
+              onClick={() => setDialogView(true)}
+            >
+              Filters
+            </Button>
+          </Grid>
+          <List />
+        </Grid>
       )}
     </Grid>
   );

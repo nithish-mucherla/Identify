@@ -58,7 +58,7 @@ contract Inventory {
         rtx.toEntity = _toEntity;
         rtx.entityLevel = _level;
         rtx.sentTimestamp = _sentTimestamp;
-        if(keccak256(bytes(_fromEntity)) == keccak256(bytes("Distn. Point")))
+        if(keccak256(bytes(_level)) == keccak256(bytes("Distn. Point")))
         rtx.receivedTimestamp = _receivedTimestamp;
         rtx.created = true;
         rtx.resourceQuantities = _resourceQuantities;
