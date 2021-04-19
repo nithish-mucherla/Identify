@@ -17,6 +17,7 @@ import {
   Chip,
   DialogContentText,
   Paper,
+  // TextField,
 } from "@material-ui/core";
 import "./txnList.css";
 import Loader from "../../loader.gif";
@@ -43,6 +44,21 @@ function TxnList(props) {
   });
   const [loading, setLoading] = useState(false);
   const [dialogView, setDialogView] = useState(false);
+  const [ackTxnList, setAckTxnList] = useState({});
+
+  // const [txnSearchKey, setTxnSearchKey] = useState("");
+
+  // const searchTxnId = () => {
+  //   let searchRes = [];
+  //   for (let item of txnList)
+  //     if (item.txnId === txnSearchKey) searchRes.push(item);
+  //   setTxnList(searchRes);
+  // };
+
+  // const onSearchKeyChange = (e) => {
+  //   setTxnSearchKey(e.target.value);
+  //   searchTxnId();
+  // };
 
   useEffect(() => {
     (async () => {
@@ -57,7 +73,7 @@ function TxnList(props) {
         return null;
       });
 
-      const events = await inventoryContractInstance.getPastEvents(
+      let newTxnEvents = await inventoryContractInstance.getPastEvents(
         "newTxn",
         {
           topics: [
@@ -86,7 +102,27 @@ function TxnList(props) {
         },
         (err, event) => console.log(event)
       );
-      setTxnList(events);
+
+      const ackTxnEvents = await inventoryContractInstance.getPastEvents(
+        "AckTxn",
+        {
+          fromBlock: 0,
+          toBlock: "latest",
+        },
+        (err, event) => console.log(event)
+      );
+      const ackTxnMap = {};
+      console.log(ackTxnEvents);
+
+      for (let i of ackTxnEvents) {
+        ackTxnMap[i.args.txnId] = {
+          timestamp: i.args.receivedTimestamp.toNumber(),
+          receiver: i.args.receiver,
+        };
+      }
+
+      setAckTxnList(ackTxnMap);
+      setTxnList(newTxnEvents);
       setLoading(false);
     })();
   }, [props.web3, filter]);
@@ -170,6 +206,7 @@ function TxnList(props) {
     if (txnList.length > 0)
       return txnList.map((txn) => {
         const val = txn.returnValues;
+        console.log(val);
         return (
           <Paper className="txnItemContainer" key={val.txnId}>
             <TxnItem
@@ -179,14 +216,25 @@ function TxnList(props) {
               toEntity={val.toEntity}
               initiator={val.initiator}
               sent={val.sentTimestamp}
-              recvd={val.receivedTimestamp}
+              recvd={
+                ackTxnList[val.txnId]
+                  ? ackTxnList[val.txnId].timestamp
+                  : val.receivedTimestamp
+              }
               statusCode={val.statusCode}
               level={val.entityLevel}
+              receiver={
+                ackTxnList[val.txnId] ? ackTxnList[val.txnId].receiver : ""
+              }
             />
           </Paper>
         );
       });
-    return <h3>No txns found</h3>;
+    return (
+      <Grid item className="noTxnsMsg">
+        No txns found
+      </Grid>
+    );
   };
   return (
     <Grid container direction="column">
@@ -278,6 +326,13 @@ function TxnList(props) {
         </Grid>
       ) : (
         <Grid container className="txnListContainer" direction="column">
+          {/* <Grid item>
+            <TextField
+              label="Search by txnId"
+              value={txnSearchKey}
+              onChange={(e) => onSearchKeyChange(e)}
+            />
+          </Grid> */}
           <Grid item>
             <Button
               className="buttonPrimary"
@@ -287,7 +342,9 @@ function TxnList(props) {
               Filters
             </Button>
           </Grid>
-          <List />
+          <Grid container direction="column-reverse">
+            <List />
+          </Grid>
         </Grid>
       )}
     </Grid>

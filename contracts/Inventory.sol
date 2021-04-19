@@ -36,46 +36,59 @@ contract Inventory {
     event AckTxn(
         bytes32 txnId,
         uint receivedTimestamp,
-        address receiver
+        address receiver,
+        uint statusCode
+    );
+
+    event errorAckTxn (
+        bytes32 txnId,
+        uint receivedTimestamp,
+        address receiver,
+        uint statusCode
     );
     
     
-    function sendTxn(string memory _fromEntity, uint _fromEntityId, string memory _toEntity, string memory _level, uint  _sentTimestamp, uint _receivedTimestamp, uint[] memory _resourceQuantities, address _credManagerAddress) public returns(uint,bytes32){
+    function sendTxn(string memory _fromEntity, uint _fromEntityId, string memory _toEntity, string memory _level, uint  _sentTimestamp, uint _receivedTimestamp, uint[] memory _resourceQuantities, address _credManagerAddress) public {
         
         CredentialManager cm = CredentialManager(_credManagerAddress);
-        uint statusCode;
-        bytes32 txnId;
-        if(!cm.authorizeSigner(_level, msg.sender, _fromEntityId))
-            statusCode = 401;
-        else
-            statusCode = 200;
         require(bytes(_fromEntity).length>0, "Invalid fromEntity");
-        txnId = keccak256(abi.encode(_fromEntity,_toEntity,_level,_sentTimestamp));
-        resourceTransaction memory rtx;
-        rtx.id = txnId;
-        rtx.initiator = msg.sender;
-        rtx.fromEntity = _fromEntity;
-        rtx.toEntity = _toEntity;
-        rtx.entityLevel = _level;
-        rtx.sentTimestamp = _sentTimestamp;
+        
+        bytes32 txnId = keccak256(abi.encode(_fromEntity,_toEntity,_level,_sentTimestamp));        
+        uint receivedTimestamp;
+        
         if(keccak256(bytes(_level)) == keccak256(bytes("Distn. Point")))
-        rtx.receivedTimestamp = _receivedTimestamp;
-        rtx.created = true;
-        rtx.resourceQuantities = _resourceQuantities;
-        resourceTxns[txnId] = rtx;
-        emit newTxn(rtx.id, msg.sender, rtx.fromEntity, rtx.fromEntity, rtx.toEntity, rtx.entityLevel, rtx.sentTimestamp, rtx.receivedTimestamp, rtx.resourceQuantities, statusCode);
-        return (statusCode,txnId);
+            receivedTimestamp = _sentTimestamp;
+        else    
+            receivedTimestamp = _receivedTimestamp;
+        
+        if(!cm.authorizeSigner(_level, msg.sender, _fromEntityId))
+            emit newTxn(txnId, msg.sender, _fromEntity, _fromEntity, _toEntity, _level, _sentTimestamp, receivedTimestamp, _resourceQuantities, 401);
+
+        else
+        {
+            resourceTxns[txnId] = resourceTransaction(txnId, msg.sender, address(0),_fromEntity, _toEntity,_level, _sentTimestamp, receivedTimestamp, _resourceQuantities, true);
+            emit newTxn(txnId, msg.sender, _fromEntity, _fromEntity, _toEntity, _level, _sentTimestamp, receivedTimestamp, _resourceQuantities, 200);
+        }
     }
     
-    function acknowledgeTxn(bytes32 _txnId, uint _recvdTimestamp) public {
-        assert(resourceTxns[_txnId].created);
+    function acknowledgeTxn(bytes32 _txnId, uint _recvdTimestamp, uint _entityId, string memory _level, address _credManagerAddress) public {
         require(_recvdTimestamp>0, "Invalid timestamp");
-        
-        resourceTransaction storage txn = resourceTxns[_txnId];
-        txn.receivedTimestamp = _recvdTimestamp;
-        txn.receiver = msg.sender;
-
-        emit AckTxn(_txnId, _recvdTimestamp, msg.sender);
+        if(!resourceTxns[_txnId].created)
+            emit errorAckTxn(_txnId, _recvdTimestamp, msg.sender,400);
+        else {
+            if(resourceTxns[_txnId].receivedTimestamp!=0) 
+                emit errorAckTxn(_txnId, _recvdTimestamp, msg.sender, 4010);
+            CredentialManager cm = CredentialManager(_credManagerAddress);
+            if(!cm.authorizeSigner(_level, msg.sender, _entityId))
+                emit errorAckTxn(_txnId, _recvdTimestamp, msg.sender, 4011);
+            else
+            {
+                resourceTransaction storage txn = resourceTxns[_txnId];
+                txn.receivedTimestamp = _recvdTimestamp;
+                txn.receiver = msg.sender;
+                emit AckTxn(_txnId, _recvdTimestamp, msg.sender, 200);
+            }
+        }             
     }
     
     function getTxnResources(bytes32 _txnId) public view returns(uint[] memory) {

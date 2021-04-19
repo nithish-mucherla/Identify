@@ -119,38 +119,40 @@ export default function TxnForm(props) {
       //   }
       // );
 
-      // const txnResult = await inventoryContractInstance.sendTxn(
-      //   fromEntity,
-      //   parseInt(form.fromEntity),
-      //   toEntity,
-      //   levels[form.entityLevel],
-      //   sentTimestamp,
-      //   recvdTimestamp,
-      //   form.resourceQuantities,
-      //   props.credManagerInstance.address,
-      //   {
-      //     from: accounts[0],
-      //   }
-      // );
+      const txnResult = await inventoryContractInstance.sendTxn(
+        fromEntity,
+        parseInt(form.fromEntity),
+        toEntity,
+        levels[form.entityLevel],
+        sentTimestamp,
+        recvdTimestamp,
+        form.resourceQuantities,
+        props.credManagerInstance.address,
+        {
+          from: accounts[0],
+        }
+      );
 
-      console.log(levels[form.entityLevel]);
       setLoading(false);
 
-      // const txnId = txnResult.logs[0].args.txnId;
-      // const _statusCode = txnResult.logs[0].args.statusCode;
+      const txnId = txnResult.logs[0].args.txnId;
+      const _statusCode = txnResult.logs[0].args.statusCode;
 
-      // console.log(_statusCode);
+      console.log(_statusCode);
 
-      // if (_statusCode.toNumber() === 200)
-      //   setSuccessSnack({
-      //     view: true,
-      //     msg: `Txn successful with txnId: ${txnId}`,
-      //   });
-      // else if (_statusCode.toNumber() === 401)
-      //   setErrorSnack({
-      //     view: true,
-      //     msg: `Unauthorized txn request.`,
-      //   });
+      if (_statusCode.toNumber() === 200)
+        setSuccessSnack({
+          view: true,
+          msg: {
+            txnId: txnId,
+            txt: "Txn successful!",
+          },
+        });
+      else if (_statusCode.toNumber() === 401)
+        setErrorSnack({
+          view: true,
+          msg: `Unauthorized txn request.`,
+        });
     })();
   };
 
@@ -313,6 +315,10 @@ export default function TxnForm(props) {
     </FormControl>
   );
 
+  const copyToClipboard = async (data) => {
+    await navigator.clipboard.writeText(data);
+  };
+
   if (!loading)
     return (
       <>
@@ -371,7 +377,26 @@ export default function TxnForm(props) {
             })
           }
         >
-          <SnackbarContent className="success" message={successSnack.msg} />
+          <SnackbarContent
+            className="success"
+            message={
+              successSnack.msg.txt && (
+                <span>
+                  {successSnack.msg.txt} <br />
+                  Txnid:{" "}
+                  {successSnack.msg.txnId.substring(0, 10) +
+                    "..." +
+                    successSnack.msg.txnId.substring(56)}
+                  <Button
+                    className="buttonPrimary"
+                    onClick={() => copyToClipboard(successSnack.msg.txnId)}
+                  >
+                    copy txnId
+                  </Button>
+                </span>
+              )
+            }
+          />
         </Snackbar>
         <Snackbar
           open={errorSnack.view}

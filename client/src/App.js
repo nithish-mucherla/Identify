@@ -8,6 +8,7 @@ import { ThemeProvider, createMuiTheme } from "@material-ui/core/styles";
 import TxnList from "./components/txnList/txnList";
 import TruffleContract from "@truffle/contract";
 import CredManager from "./contracts/CredentialManager.json";
+import AckTxn from "./components/ackTxn/ackTxn.js";
 
 const App = () => {
   const [web3, setWeb3] = useState(null);
@@ -211,6 +212,14 @@ const App = () => {
                   View Transactions
                 </Button>
               </Grid>
+              <Grid item>
+                <Button
+                  className="buttonPrimary"
+                  onClick={() => setView("ackRecpt")}
+                >
+                  Acknowledge Receipt
+                </Button>
+              </Grid>
             </>
           )}
 
@@ -231,7 +240,7 @@ const App = () => {
           credManagerInstance={credManagerInst}
         />
       );
-    else
+    else if (view === "txnList")
       return (
         <TxnList
           web3={web3}
@@ -239,6 +248,14 @@ const App = () => {
           states={states}
           districts={districts}
           dstnPoints={dstnPoints}
+        />
+      );
+    else if (view === "ackRecpt")
+      return (
+        <AckTxn
+          web3={web3}
+          setView={setView}
+          credManagerInstance={credManagerInst}
         />
       );
   };

@@ -1,5 +1,5 @@
 .txnListContainer {
-  padding: 20px;
+  padding: 20px !important;
   font-family: "Lato";
   color: white;
 }
@@ -24,11 +24,12 @@
   padding: 5px !important;
   margin: 5px !important;
   font-family: "Lato" !important;
+  background-color: white !important;
 }
 
 @media only screen and (orientation: landscape) {
   .txnListContainer {
-    padding: 100px;
+    padding: 100px !important;
     font-family: "Lato";
     color: white;
   }

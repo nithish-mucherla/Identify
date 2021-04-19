@@ -55,6 +55,13 @@
   margin-top: -50px; /* Half the height */
   margin-left: -50px;
 }
+
+.noTxnsMsg {
+  text-align: center;
+  letter-spacing: 0.03em;
+  font-family: "Lato";
+  padding-top: 10vh;
+}
 @media only screen and (orientation: landscape) {
   .MuiFormControl-root {
     width: 25vw !important;

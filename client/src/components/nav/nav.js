@@ -32,6 +32,15 @@ function Nav(props) {
       >
         SendResources
       </Link>
+      <Link
+        className="link"
+        underline="none"
+        onClick={() => {
+          props.setView("ackRecpt");
+        }}
+      >
+        Ack Receipt
+      </Link>
     </Breadcrumbs>
   );
 }
