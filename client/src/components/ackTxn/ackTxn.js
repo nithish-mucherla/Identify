@@ -9,6 +9,7 @@ import Loader from "../../loader.gif";
 import TruffleContract from "@truffle/contract";
 
 function AckTxn(props) {
+  console.log(props.credManagerInstance.address);
   const [scanner, setScanner] = useState(false);
   const [successSnack, setSuccessSnack] = useState({
     view: false,

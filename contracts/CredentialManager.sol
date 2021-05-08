@@ -1,40 +1,39 @@
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity >=0.5.0 <=0.8.3; 
+pragma solidity >=0.5.0 <=0.8.4; 
 
 contract CredentialManager {
-
     constructor() {
-        addBeneficiary(988200735669,"2wTcWdsR5o");
-        addBeneficiary(557284942059,"xIwza35UbW");
-        addBeneficiary(682810563520,"1MJk4JemUn");
-        addBeneficiary(769816380811,"4GXZHSKxx5");
-        addBeneficiary(888277646897,"s20F4tZgZg");
-        addBeneficiary(859079831141,"Voq9d2qnoO");
-        addBeneficiary(754084584111,"Mf3isL3ScI");
-        addBeneficiary(890910200564,"kQK8gaerT7");
-        addBeneficiary(861300230164,"GIzIcMzv5d");
-        addBeneficiary(888194596202,"ofE4zUTwL5");
+        string[28] memory statesList=['Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand', 'Karnataka', 'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur', 'Meghalaya', 'Mizoram', 'Nagaland', 'Odisha', 'Punjab', 'Rajasthan', 'Sikkim', 'Tamil Nadu', 'Telangana', 'Tripura', "Uttar Pradesh", "Uttarakhand", "West Bengal"];
+        
+        uint i=0;
+        for(i=0;i<28;i++)
+        addState(statesList[i]);  
     }
+    
     struct State {
         uint id;
-        uint[] districtIds;
-        address authorityId;
+        mapping(address=>bool) authorities;
+        string name;
     }
     
     struct District {
         uint id;
-        uint[] dstnIds;
-        address authorityId;
+        uint stateId;
+        mapping(address=>bool) authorities;
+        string name;
     }
     
     struct DistributionPoint {
         uint id;
+        uint districtId;
         uint[] beneficiaryIds;
-        address authorityId;
+        mapping(address=>bool) authorities;
+        string name;
     }
     
     struct Beneficiary {
         uint id;
+        uint dstnId;
         string credentials;
     }
     
@@ -44,45 +43,44 @@ contract CredentialManager {
     District[] public districts;
     State[] public states;
     
-    event NewState(uint _id, uint[] _districtIds, address _authorityId);
-    event NewDistrict(uint _id, uint[] _dstnPointId, address _authorityId);
-    event NewDstnPoint(uint _id, uint[] _beneficiaries, address _authorityId);
+    event NewState(uint _id, string _name);
+    event NewDistrict(uint _id, string _name,uint _stateId);
+    event NewDstnPoint(uint _id, string _name, uint _districtId);
+    event NewAuthority(uint _level, uint _entityId, address _authorityId);
+    event NewBeneficiary(uint _id, string _credentials, address _registeredBy, uint _dstnId);
     
-    function addState(uint[] memory _districtIds, address _authorityId) public{
-        uint id = states.length;
-        states.push(State(id,_districtIds,_authorityId));
-        emit NewState(id, _districtIds, _authorityId);
-    }
-    
-    function addDistrict(uint[] memory _dstnIds, address _authorityId) public {
-        uint id = districts.length;
-        districts.push(District(id, _dstnIds, _authorityId));   
-        emit NewDistrict(id, _dstnIds, _authorityId);
+    function addState(string memory _name) public{
+        states.push();
+        State storage s = states[states.length-1];
+        s.id = states.length;
+        s.name = _name;
+        emit NewState(s.id, _name);
     }
     
-    function addDstnPoint(uint[] memory _beneficiaries, address _authorityId) public {
-        uint id = dstnPoints.length;
-        dstnPoints.push(DistributionPoint(id, _beneficiaries, _authorityId));
-        emit NewDstnPoint(id, _beneficiaries, _authorityId);
+    function addDistrict(string memory _districtName, uint _stateId) public {
+        districts.push();   
+        District storage d = districts[districts.length-1];
+        d.id = districts.length;
+        d.name = _districtName;
+        d.stateId=_stateId;
+        emit NewDistrict(d.id,_districtName, _stateId);
     }
     
-    function addBeneficiary(uint _id, string memory _credentials) public{
-        beneficiaries.push(Beneficiary(_id, _credentials));
-    }
-
-    function getDistricts(uint _stateId) public view returns(uint[] memory) {
-        require(states.length>0, "No district registered");
-        require(_stateId>=0 && _stateId<states.length, "Invalid state id");
-        return states[_stateId].districtIds;
-        //returns list of district ids in a state
+    function addDstnPoint(string memory _dstnPointName, uint _districtId) public {
+        dstnPoints.push();
+        DistributionPoint storage dp = dstnPoints[dstnPoints.length-1];
+        dp.id=dstnPoints.length;
+        dp.name = _dstnPointName;
+        dp.districtId = _districtId;
+        emit NewDstnPoint(dp.id, _dstnPointName, _districtId);
     }
     
-    function getDstnPoints(uint _districtId) public view returns(uint[] memory) {
-        require(dstnPoints.length>0, "No distribution point registered");
-        require(_districtId>=0 && _districtId<districts.length, "Invalid district Id");
-        return districts[_districtId].dstnIds;
-        //returns the list of dstn point ids in a district
+    function addBeneficiary(uint _id, string memory _credentials, uint _dstnId) public{
+        dstnPoints[_dstnId].beneficiaryIds.push(_id);
+        beneficiaries.push(Beneficiary(_id, _dstnId, _credentials));
+        emit NewBeneficiary(_id, _credentials, msg.sender, _dstnId);
     }
+    
     
     function getBeneficiaries(uint _dstnPointId) public view returns(uint[] memory) {
         require(beneficiaries.length>0, "No Beneficiary registered");
@@ -95,6 +93,17 @@ contract CredentialManager {
         return beneficiaries;
     }
     
+    function addAuthority(uint _level, uint _entityId, address _authority) public{
+        require(_level>0 && _level<4, "invalid level");
+        if(_level==1)
+        states[_entityId].authorities[_authority] = true;
+        else if(_level==2)
+        districts[_entityId].authorities[_authority] = true;
+        else if(_level==3)
+        dstnPoints[_entityId].authorities[_authority] = true;
+        emit NewAuthority(_level, _entityId, _authority);
+    }
+    
     function authorizeSigner(string memory _type, address _signer, uint _entityId) public view returns(bool){
         
         bool isAuthorized;
@@ -103,13 +112,13 @@ contract CredentialManager {
         isAuthorized = centralAuthId == _signer;
         
         if(keccak256(abi.encode(_type)) == keccak256(abi.encode("State")))
-        isAuthorized = states[_entityId].authorityId == _signer;
+        isAuthorized = states[_entityId].authorities[_signer];
         
         if(keccak256(abi.encode(_type)) == keccak256(abi.encode("District")))
-        isAuthorized = districts[_entityId].authorityId == _signer;
+        isAuthorized = districts[_entityId].authorities[_signer];
         
         if(keccak256(abi.encode(_type)) == keccak256(abi.encode("Distn. Point")))
-        isAuthorized = dstnPoints[_entityId].authorityId == _signer;
+        isAuthorized = dstnPoints[_entityId].authorities[_signer];
        
         return isAuthorized;
         

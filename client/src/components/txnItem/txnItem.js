@@ -3,6 +3,7 @@ import QRCode from "qrcode.react";
 import "./txnItem.css";
 import { Grid, Chip } from "@material-ui/core";
 import ErrorOutlineIcon from "@material-ui/icons/ErrorOutline";
+import keccak256 from "keccak256";
 
 function TxnItem(props) {
   const sentDate = new Date(parseInt(props.sent)).toLocaleString();
@@ -11,17 +12,29 @@ function TxnItem(props) {
       ? "Not yet received"
       : new Date(parseInt(props.recvd)).toLocaleString();
 
+  const entityLevel = {
+    [keccak256("Central").toString("hex")]: "Central",
+    [keccak256("State").toString("hex")]: "State",
+    [keccak256("District").toString("hex")]: "District",
+    [keccak256("Distn. Point").toString("hex")]: "Distn. Point",
+  }[props.level.slice(2)];
+
+  console.log(entityLevel);
+
+  const toEntityLevel = {
+    Central: "State",
+    State: "District",
+    District: "Distn.Point",
+    "Distn. Point": "Beneficiary",
+  }[entityLevel];
+
   const QrData = {
     txnId: props.txnId,
-    entityId:
-      props.fromEntity.split("-")[0] === "Distn. Point"
-        ? ""
-        : props.toEntity.split("-")[1],
-    level:
-      props.fromEntity.split("-")[0] === "Distn. Point"
-        ? ""
-        : props.toEntity.split("-")[0],
+    entityId: entityLevel === "Distn. Point" ? "" : props.toEntityId - 1,
+    level: toEntityLevel,
   };
+
+  console.log(QrData);
   return (
     <Grid container alignItems="center" className="txnItem">
       <Grid container item direction="column" xs={12} sm={12} md={12} lg={10}>

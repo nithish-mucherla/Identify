@@ -39,7 +39,6 @@ export default function TxnForm(props) {
   });
   const levels = ["Central", "State", "District", "Distn. Point"];
   const entities = [props.states, props.districts, props.dstnPoints];
-  const storageListNames = ["_districtIds", "_dstnPointId", "_beneficiaries"];
 
   useEffect(() => {
     (async () => {
@@ -94,35 +93,27 @@ export default function TxnForm(props) {
         method: "eth_requestAccounts",
       });
 
-      const fromEntity =
-        form.entityLevel === "0"
-          ? "Central"
-          : `${levels[form.entityLevel]}-${form.fromEntity}`;
-
-      const toEntity =
-        form.entityLevel === "3"
-          ? form.toEntity
-          : `${levels[parseInt(form.entityLevel) + 1]}-${form.toEntity}`;
-
+      const fromEntityObject = JSON.parse(form.fromEntity);
+      const toEntityObject = JSON.parse(form.toEntity);
       const sentTimestamp = new Date().getTime();
       const recvdTimestamp = form.entityLevel === 3 ? sentTimestamp : 0;
+
       // console.log(
-      //   "",
-      //   fromEntity,
-      //   toEntity,
+      //   fromEntityObject._name,
+      //   parseInt(fromEntityObject._id),
+      //   toEntityObject._name,
+      //   parseInt(toEntityObject._id),
       //   levels[form.entityLevel],
-      //   new Date().getTime(),
-      //   0,
-      //   form.resourceQuantities,
-      //   {
-      //     from: accounts[0],
-      //   }
+      //   sentTimestamp,
+      //   recvdTimestamp,
+      //   form.resourceQuantities
       // );
 
       const txnResult = await inventoryContractInstance.sendTxn(
-        fromEntity,
-        parseInt(form.fromEntity),
-        toEntity,
+        fromEntityObject._name,
+        parseInt(fromEntityObject._id),
+        toEntityObject._name,
+        parseInt(toEntityObject._id),
         levels[form.entityLevel],
         sentTimestamp,
         recvdTimestamp,
@@ -174,15 +165,20 @@ export default function TxnForm(props) {
       <>
         <option aria-label="None" value="" />
         {level === "0" ? (
-          <option value="0">Central</option>
+          <option value={JSON.stringify({ _id: 0, _name: "Central" })}>
+            Central
+          </option>
         ) : (
           <>
-            {entities[level - 1].map((entity, index) => (
-              <option
-                value={index}
-                key={index}
-              >{`${levels[level]}-${index}`}</option>
-            ))}
+            {entities[level - 1].map((entity, index) => {
+              const id = entity.returnValues._id;
+              const name = entity.returnValues._name;
+              return (
+                <option value={JSON.stringify(entity.returnValues)} key={id}>
+                  {name}
+                </option>
+              );
+            })}
           </>
         )}
       </>
@@ -190,28 +186,37 @@ export default function TxnForm(props) {
   };
 
   const ToEntityOptions = () => {
-    const level = form.entityLevel;
-    if (level === "0")
+    const level = parseInt(form.entityLevel);
+    if (level === 0)
       return (
         <>
-          {entities[level].map((entity, index) => (
-            <option value={index} key={index}>{`${levels[1]}-${index}`}</option>
-          ))}
+          {entities[level].map((entity, index) => {
+            const id = entity.returnValues._id;
+            const name = entity.returnValues._name;
+            return (
+              <option value={JSON.stringify({ _id: id, _name: name })} key={id}>
+                {name}
+              </option>
+            );
+          })}
         </>
       );
 
+    const toEntities = level !== 3 ? entities[level] : [];
+    const fromEntity = form.fromEntity && JSON.parse(form.fromEntity);
+
     return (
       form.fromEntity &&
-      entities[level - 1][form.fromEntity].returnValues[
-        storageListNames[level - 1]
-      ].map((val, index) => {
-        const label =
-          level === "3" ? val : `${levels[parseInt(level) + 1]}-${val}`;
-        return (
-          <option value={val} key={index}>
-            {label}
-          </option>
-        );
+      toEntities.map((val, index) => {
+        if (val.returnValues[2] === fromEntity._id) {
+          const name = val.returnValues._name;
+          const id = val.returnValues._id;
+          return (
+            <option value={JSON.stringify({ _id: id, _name: name })} key={id}>
+              {name}
+            </option>
+          );
+        } else return null;
       })
     );
   };
@@ -225,7 +230,10 @@ export default function TxnForm(props) {
         name="fromEntity"
         id="fromEntity"
         onChange={(e) => {
-          setForm({ ...form, fromEntity: e.target.value });
+          setForm({
+            ...form,
+            fromEntity: e.target.value,
+          });
         }}
         error={false}
       >

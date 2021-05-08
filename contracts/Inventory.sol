@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0
 
-pragma solidity >=0.5.0 <=0.8.3;
+pragma solidity >=0.5.0 <=0.8.4;
 import "./CredentialManager.sol";
 
 contract Inventory {
@@ -25,7 +25,9 @@ contract Inventory {
         address indexed initiator,
         string indexed fromEntityIndex, //stores keccak256 hash of the string. To filter, filter using hash(key)
         string fromEntity,
+        uint fromEntityId,
         string toEntity,
+        uint toEntityId,
         string indexed entityLevel,
         uint sentTimestamp,
         uint receivedTimestamp,
@@ -48,26 +50,31 @@ contract Inventory {
     );
     
     
-    function sendTxn(string memory _fromEntity, uint _fromEntityId, string memory _toEntity, string memory _level, uint  _sentTimestamp, uint _receivedTimestamp, uint[] memory _resourceQuantities, address _credManagerAddress) public {
+    function sendTxn(string memory _fromEntity, uint _fromEntityId, string memory _toEntity, uint _toEntityId, string memory _level, uint  _sentTimestamp, uint _receivedTimestamp, uint[] memory _resourceQuantities, address _credManagerAddress) public {
         
         CredentialManager cm = CredentialManager(_credManagerAddress);
         require(bytes(_fromEntity).length>0, "Invalid fromEntity");
         
         bytes32 txnId = keccak256(abi.encode(_fromEntity,_toEntity,_level,_sentTimestamp));        
+        string memory fromEntity = _fromEntity; 
+        uint fromEntityId = _fromEntityId;
+        string memory toEntity = _toEntity;
+        uint toEntityId = _toEntityId;
+        uint sentTimestamp = _sentTimestamp;
+        uint[] memory resourceQuantities = _resourceQuantities;
         uint receivedTimestamp;
-        
         if(keccak256(bytes(_level)) == keccak256(bytes("Distn. Point")))
             receivedTimestamp = _sentTimestamp;
         else    
             receivedTimestamp = _receivedTimestamp;
         
-        if(!cm.authorizeSigner(_level, msg.sender, _fromEntityId))
-            emit newTxn(txnId, msg.sender, _fromEntity, _fromEntity, _toEntity, _level, _sentTimestamp, receivedTimestamp, _resourceQuantities, 401);
+        if(!cm.authorizeSigner(_level, msg.sender, fromEntityId))
+            emit newTxn(txnId, msg.sender, fromEntity, fromEntity, fromEntityId, toEntity, toEntityId, _level, sentTimestamp, receivedTimestamp, resourceQuantities, 401);
 
         else
         {
-            resourceTxns[txnId] = resourceTransaction(txnId, msg.sender, address(0),_fromEntity, _toEntity,_level, _sentTimestamp, receivedTimestamp, _resourceQuantities, true);
-            emit newTxn(txnId, msg.sender, _fromEntity, _fromEntity, _toEntity, _level, _sentTimestamp, receivedTimestamp, _resourceQuantities, 200);
+            resourceTxns[txnId] = resourceTransaction(txnId, msg.sender, address(0), fromEntity, toEntity, _level, sentTimestamp, receivedTimestamp, _resourceQuantities, true);
+            emit newTxn(txnId, msg.sender, fromEntity, fromEntity, fromEntityId, toEntity, toEntityId, _level, sentTimestamp, receivedTimestamp, resourceQuantities, 200);
         }
     }
     
