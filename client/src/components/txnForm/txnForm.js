@@ -111,7 +111,9 @@ export default function TxnForm(props) {
 
       const txnResult = await inventoryContractInstance.sendTxn(
         fromEntityObject._name,
-        parseInt(fromEntityObject._id),
+        parseInt(fromEntityObject._id - 1),
+        // fromEntityObject._id - id of the entity(Eg.: state id. state id of Telangana: 24)
+        //fromEntityObject._id - 1 => index of the state in states[] of credentialManager contract (Eg.:23 for telangana )
         toEntityObject._name,
         parseInt(toEntityObject._id),
         levels[form.entityLevel],

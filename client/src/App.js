@@ -10,6 +10,7 @@ import TruffleContract from "@truffle/contract";
 import CredManager from "./contracts/CredentialManager.json";
 import AckTxn from "./components/ackTxn/ackTxn.js";
 import { districtsList } from "./districtsList.js";
+import Admin from "./components/Admin/Admin";
 
 const PrivateKeyProvider = require("@truffle/hdwallet-provider");
 const privateKeys = [
@@ -231,6 +232,14 @@ const App = () => {
                   Acknowledge Receipt
                 </Button>
               </Grid>
+              <Grid item>
+                <Button
+                  className="buttonSecondary"
+                  onClick={() => setView("admin")}
+                >
+                  Admin
+                </Button>
+              </Grid>
             </>
           )}
 
@@ -274,6 +283,16 @@ const App = () => {
           web3={web3}
           setView={setView}
           credManagerInstance={credManagerInst}
+        />
+      );
+    else if (view === "admin")
+      return (
+        <Admin
+          web3={web3}
+          states={states}
+          districts={districts}
+          dstnPoints={dstnPoints}
+          credManagerInst={credManagerInst}
         />
       );
   };

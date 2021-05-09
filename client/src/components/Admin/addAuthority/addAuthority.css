@@ -1,0 +1,15 @@
+.errorText {
+  color: #f44336 !important;
+}
+
+.successSnack {
+  background-color: #09d3ac !important;
+  color: white !important;
+  letter-spacing: 0.1em;
+}
+
+.errorSnack {
+  background-color: #f44336 !important;
+  color: white !important;
+  letter-spacing: 0.1em;
+}
