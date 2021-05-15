@@ -47,6 +47,7 @@ function AckTxn(props) {
         const entityId = parseInt(QrData.entityId);
         const level = QrData.level;
         const txnResult = await inventoryContractInstance.acknowledgeTxn(
+          accounts[0].slice(2),
           txnId,
           timeStamp,
           entityId,

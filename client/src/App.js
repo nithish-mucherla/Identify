@@ -40,11 +40,11 @@ const App = () => {
       setLoading(true);
       const web3 = await getWeb3();
       const credManagerContract = TruffleContract(CredManager);
-      credManagerContract.setProvider(privateKeyProvider);
+      credManagerContract.setProvider(web3.currentProvider);
       const credManagerInstance = await credManagerContract.deployed();
       loadData(credManagerInstance, "NewState", setStates);
       loadData(credManagerInstance, "NewDistrict", setDistricts);
-      // loadData(credManagerInstance, "NewDstnPoint", setDstnPoints);
+      loadData(credManagerInstance, "NewDstnPoint", setDstnPoints);
       setWeb3(web3);
       setCredManagerInst(credManagerInstance);
       setLoading(false);
@@ -117,6 +117,9 @@ const App = () => {
       secondary: {
         main: "#fff",
       },
+      error: {
+        main: "#f5f5f5",
+      },
     },
     typography: {
       fontFamily: "Lato",
@@ -173,15 +176,36 @@ const App = () => {
   //   }
   // };
 
+  const addDstnPoints = async () => {
+    console.log("adding");
+
+    const accounts = await window.ethereum.request({
+      method: "eth_requestAccounts",
+    });
+
+    //added 2 dstnpoints each for 10 districts
+    let j = 0;
+    for (let i = 1; i <= 13; i++) {
+      const txn = await credManagerInst.addDstnPoint("DstnPt-" + j++, i, {
+        from: accounts[0],
+      });
+      console.log("txn for " + j + " : " + txn + "\n");
+      const txn1 = await credManagerInst.addDstnPoint("DstnPt-" + j++, i, {
+        from: accounts[0],
+      });
+      console.log("txn for " + j + " : " + txn1 + "\n");
+    }
+  };
+
   const addDistricts = async () => {
     console.log("ADding");
     const accounts = await window.ethereum.request({
       method: "eth_requestAccounts",
     });
 
-    let dsts = districtsList.length;
+    let dsts = 10;
 
-    for (let i = 1; i < dsts; i++) {
+    for (let i = 0; i < 1; i++) {
       let dstsLen = districtsList[i].length;
       console.log("state-" + (i + 1));
       for (let j = 0; j < dstsLen; j++) {
@@ -240,16 +264,24 @@ const App = () => {
                   Admin
                 </Button>
               </Grid>
+              <Grid item>
+                <Button
+                  className="buttonSecondary"
+                  onClick={() => setView("add beneficiary")}
+                >
+                  Add Beneficiary
+                </Button>
+              </Grid>
             </>
           )}
 
           {/* <Button
             onClick={() => {
-              addDistricts();
+              addDstnPoints();
               console.log("hi");
             }}
           >
-            Add State
+            Add Districts
           </Button> */}
           {/* <Button onClick={() => addDstnPoints()}>Add dntnPoints</Button>
           <Button onClick={() => addDistricts()}>Add Districts</Button>
@@ -295,6 +327,7 @@ const App = () => {
           credManagerInst={credManagerInst}
         />
       );
+    else if (view === "add beneficiary") return <div></div>;
   };
 
   return (

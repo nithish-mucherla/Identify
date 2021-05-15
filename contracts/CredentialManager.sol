@@ -12,14 +12,14 @@ contract CredentialManager {
     
     struct State {
         uint id;
-        mapping(address=>bool) authorities;
+        mapping(string=>bool) authorities;
         string name;
     }
     
     struct District {
         uint id;
         uint stateId;
-        mapping(address=>bool) authorities;
+        mapping(string=>bool) authorities;
         string name;
     }
     
@@ -27,7 +27,7 @@ contract CredentialManager {
         uint id;
         uint districtId;
         uint[] beneficiaryIds;
-        mapping(address=>bool) authorities;
+        mapping(string=>string) authorities; //id=>passwordHash
         string name;
     }
     
@@ -37,7 +37,7 @@ contract CredentialManager {
         string credentials;
     }
     
-    address public centralAuthId = 0xf17f52151EbEF6C7334FAD080c5704D77216b732;
+    string public centralAuthId = "f17f52151EbEF6C7334FAD080c5704D77216b732";
     Beneficiary[] public beneficiaries;
     DistributionPoint[] public dstnPoints;
     District[] public districts;
@@ -46,8 +46,8 @@ contract CredentialManager {
     event NewState(uint _id, string _name);
     event NewDistrict(uint _id, string _name,uint _stateId);
     event NewDstnPoint(uint _id, string _name, uint _districtId);
-    event NewAuthority(uint _level, uint _entityId, address _authorityId);
-    event NewBeneficiary(uint _id, string _credentials, address _registeredBy, uint _dstnId);
+    event NewAuthority(uint _level, uint _entityId, string _authorityId);
+    event NewBeneficiary(uint _id, string _credentials, string _registeredBy, uint _dstnId);
     
     function addState(string memory _name) public{
         states.push();
@@ -75,10 +75,10 @@ contract CredentialManager {
         emit NewDstnPoint(dp.id, _dstnPointName, _districtId);
     }
     
-    function addBeneficiary(uint _id, string memory _credentials, uint _dstnId) public{
+    function addBeneficiary(uint _id, string memory _credentials, string memory _authorityId, uint _dstnId) public{
         dstnPoints[_dstnId].beneficiaryIds.push(_id);
         beneficiaries.push(Beneficiary(_id, _dstnId, _credentials));
-        emit NewBeneficiary(_id, _credentials, msg.sender, _dstnId);
+        emit NewBeneficiary(_id, _credentials, _authorityId, _dstnId);
     }
     
     
@@ -93,32 +93,43 @@ contract CredentialManager {
         return beneficiaries;
     }
     
-    function addAuthority(uint _level, uint _entityId, address _authority) public{
+    function addAuthority(uint _level, uint _entityId, string memory _authorityId) public{
         require(_level>0 && _level<4, "invalid level");
         if(_level==1)
-        states[_entityId].authorities[_authority] = true;
+        states[_entityId].authorities[_authorityId] = true;
         else if(_level==2)
-        districts[_entityId].authorities[_authority] = true;
-        else if(_level==3)
-        dstnPoints[_entityId].authorities[_authority] = true;
-        emit NewAuthority(_level, _entityId, _authority);
+        districts[_entityId].authorities[_authorityId] = true;
+        emit NewAuthority(_level, _entityId, _authorityId);
     }
     
-    function authorizeSigner(string memory _type, address _signer, uint _entityId) public view returns(bool){
+    function addAuthority(uint _level, uint _entityId, string memory _authorityId, string memory _password) public {
+        dstnPoints[_entityId].authorities[_authorityId] = _password;
+        emit NewAuthority(_level, _entityId, _authorityId);
+    }
+    
+    function authorizeSigner(string memory _type, string memory _signer, uint _entityId) public view returns(bool){
         
         bool isAuthorized;
 
         if(keccak256(abi.encode(_type)) == keccak256(abi.encode("Central")))
-        isAuthorized = centralAuthId == _signer;
+        isAuthorized = keccak256(bytes(centralAuthId)) == keccak256(bytes(_signer));
         
         if(keccak256(abi.encode(_type)) == keccak256(abi.encode("State")))
         isAuthorized = states[_entityId].authorities[_signer];
         
         if(keccak256(abi.encode(_type)) == keccak256(abi.encode("District")))
         isAuthorized = districts[_entityId].authorities[_signer];
+       
+        return isAuthorized;
+        
+    }
+    
+    function authorizeSigner(string memory _type, string memory _signer, uint _entityId, string memory _password) public view returns(bool){
+        
+        bool isAuthorized;
         
         if(keccak256(abi.encode(_type)) == keccak256(abi.encode("Distn. Point")))
-        isAuthorized = dstnPoints[_entityId].authorities[_signer];
+        isAuthorized = keccak256(bytes(dstnPoints[_entityId].authorities[_signer])) == keccak256(bytes(_password));
        
         return isAuthorized;
         

@@ -1,5 +1,8 @@
 .errorText {
-  color: #f44336 !important;
+  display: flex !important;
+  color: #f5f5f5 !important;
+  align-items: center !important;
+  padding: 4px 0 !important;
 }
 
 .successSnack {
@@ -12,4 +15,8 @@
   background-color: #f44336 !important;
   color: white !important;
   letter-spacing: 0.1em;
+}
+
+.buttonGroup {
+  margin-top: 40px !important;
 }

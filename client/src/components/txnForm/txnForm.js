@@ -93,29 +93,37 @@ export default function TxnForm(props) {
         method: "eth_requestAccounts",
       });
 
+      const level = levels[form.entityLevel];
       const fromEntityObject = JSON.parse(form.fromEntity);
+      const fromEntityId =
+        level === "Central" ? 0 : parseInt(fromEntityObject._id) - 1;
       const toEntityObject = JSON.parse(form.toEntity);
       const sentTimestamp = new Date().getTime();
       const recvdTimestamp = form.entityLevel === 3 ? sentTimestamp : 0;
 
       // console.log(
+      //   accounts[0].slice(2) + "",
+      //   level === "Distn. Point" ? "pass" : "",
       //   fromEntityObject._name,
       //   parseInt(fromEntityObject._id),
       //   toEntityObject._name,
       //   parseInt(toEntityObject._id),
-      //   levels[form.entityLevel],
+      //   level,
       //   sentTimestamp,
       //   recvdTimestamp,
-      //   form.resourceQuantities
+      //   form.resourceQuantities,
+      //   props.credManagerInstance.address
       // );
 
       const txnResult = await inventoryContractInstance.sendTxn(
+        accounts[0].slice(2),
+        level === "Distn. Point" ? "pass" : "",
         fromEntityObject._name,
-        parseInt(fromEntityObject._id - 1),
+        fromEntityId,
         // fromEntityObject._id - id of the entity(Eg.: state id. state id of Telangana: 24)
         //fromEntityObject._id - 1 => index of the state in states[] of credentialManager contract (Eg.:23 for telangana )
         toEntityObject._name,
-        parseInt(toEntityObject._id),
+        parseInt(toEntityObject._id - 1),
         levels[form.entityLevel],
         sentTimestamp,
         recvdTimestamp,
