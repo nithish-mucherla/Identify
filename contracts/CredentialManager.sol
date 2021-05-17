@@ -8,18 +8,26 @@ contract CredentialManager {
         uint i=0;
         for(i=0;i<28;i++)
         addState(statesList[i]);  
+
+        string[4] memory distList = ["d1","d2","d3","d4"];
+        for(i=0;i<4;i++)
+        addDistrict(distList[i], 1);
+
+        string[4] memory distPoint = ["dp-1","dp-2","dp-3","dp-4"];
+        for(i=0;i<4;i++)
+        addDstnPoint(distPoint[i],(i+1));
     }
     
     struct State {
         uint id;
-        mapping(string=>bool) authorities;
+        mapping(address=>bool) authorities;
         string name;
     }
     
     struct District {
         uint id;
         uint stateId;
-        mapping(string=>bool) authorities;
+        mapping(address=>bool) authorities;
         string name;
     }
     
@@ -27,7 +35,7 @@ contract CredentialManager {
         uint id;
         uint districtId;
         uint[] beneficiaryIds;
-        mapping(string=>string) authorities; //id=>passwordHash
+        mapping(address=>bool) authorities;
         string name;
     }
     
@@ -35,10 +43,13 @@ contract CredentialManager {
         uint id;
         uint dstnId;
         string credentials;
+        bool isRegistered;
     }
     
-    string public centralAuthId = "f17f52151EbEF6C7334FAD080c5704D77216b732";
-    Beneficiary[] public beneficiaries;
+    string private secret = "identify@capstone";
+    address public centralAuthId = 0xf17f52151EbEF6C7334FAD080c5704D77216b732;
+    mapping(uint=>Beneficiary) public beneficiaries;
+    uint public beneficiaryCount;
     DistributionPoint[] public dstnPoints;
     District[] public districts;
     State[] public states;
@@ -46,8 +57,8 @@ contract CredentialManager {
     event NewState(uint _id, string _name);
     event NewDistrict(uint _id, string _name,uint _stateId);
     event NewDstnPoint(uint _id, string _name, uint _districtId);
-    event NewAuthority(uint _level, uint _entityId, string _authorityId);
-    event NewBeneficiary(uint _id, string _credentials, string _registeredBy, uint _dstnId);
+    event NewAuthority(uint _level, uint _entityId, address _authorityId);
+    event NewBeneficiary(uint _id, string _credentials, address _registeredBy, uint _dstnId, uint _statusCode);
     
     function addState(string memory _name) public{
         states.push();
@@ -75,61 +86,62 @@ contract CredentialManager {
         emit NewDstnPoint(dp.id, _dstnPointName, _districtId);
     }
     
-    function addBeneficiary(uint _id, string memory _credentials, string memory _authorityId, uint _dstnId) public{
-        dstnPoints[_dstnId].beneficiaryIds.push(_id);
-        beneficiaries.push(Beneficiary(_id, _dstnId, _credentials));
-        emit NewBeneficiary(_id, _credentials, _authorityId, _dstnId);
+    function addBeneficiary(uint _id, string memory _credentials, uint _dstnId, bytes32 _token) public{
+        if(authorizeSigner("Distn. Point", msg.sender, _dstnId))
+        {
+            if(beneficiaries[_id].isRegistered)
+                emit NewBeneficiary(_id, _credentials, msg.sender, _dstnId, 409); //Beneficiary already registered
+            else {
+                
+                if(keccak256(abi.encodePacked(_id,_dstnId,_credentials,secret)) == _token)
+                {
+                    dstnPoints[_dstnId-1].beneficiaryIds.push(_id);
+                    beneficiaries[_id] = Beneficiary(_id, _dstnId, _credentials, true);
+                    beneficiaryCount+=1;
+                    emit NewBeneficiary(_id, _credentials, msg.sender, _dstnId, 200); //200 succesfully added
+                }
+                else
+                    emit NewBeneficiary(_id, _credentials, msg.sender, _dstnId, 403); // 403 :  Forbidden action as tokens mismatch 
+            }
+        }
+        else
+            emit NewBeneficiary(_id, _credentials, msg.sender, _dstnId, 401);  //401 authority not authorized to add Beneficiary
     }
     
     
     function getBeneficiaries(uint _dstnPointId) public view returns(uint[] memory) {
-        require(beneficiaries.length>0, "No Beneficiary registered");
+        require(beneficiaryCount>0, "No Beneficiary registered");
         require(_dstnPointId>=0 && _dstnPointId<dstnPoints.length, "Invalid DistributionPoint id");
-        return dstnPoints[_dstnPointId].beneficiaryIds;
+        return dstnPoints[_dstnPointId-1].beneficiaryIds;
         //returns beneficiary Ids of a dstn point
     }
     
-    function getBeneficiaryList() public view returns(Beneficiary[] memory) {
-        return beneficiaries;
-    }
-    
-    function addAuthority(uint _level, uint _entityId, string memory _authorityId) public{
+    function addAuthority(uint _level, uint _entityId, address _authorityId) public{
         require(_level>0 && _level<4, "invalid level");
         if(_level==1)
-        states[_entityId].authorities[_authorityId] = true;
+        states[_entityId-1].authorities[_authorityId] = true;
         else if(_level==2)
-        districts[_entityId].authorities[_authorityId] = true;
+        districts[_entityId-1].authorities[_authorityId] = true;
+        else if(_level==3)
+        dstnPoints[_entityId-1].authorities[_authorityId] = true;
         emit NewAuthority(_level, _entityId, _authorityId);
     }
-    
-    function addAuthority(uint _level, uint _entityId, string memory _authorityId, string memory _password) public {
-        dstnPoints[_entityId].authorities[_authorityId] = _password;
-        emit NewAuthority(_level, _entityId, _authorityId);
-    }
-    
-    function authorizeSigner(string memory _type, string memory _signer, uint _entityId) public view returns(bool){
+
+    function authorizeSigner(string memory _type, address _signer, uint _entityId) public view returns(bool){
         
         bool isAuthorized;
 
         if(keccak256(abi.encode(_type)) == keccak256(abi.encode("Central")))
-        isAuthorized = keccak256(bytes(centralAuthId)) == keccak256(bytes(_signer));
+        isAuthorized = centralAuthId == _signer;
         
         if(keccak256(abi.encode(_type)) == keccak256(abi.encode("State")))
-        isAuthorized = states[_entityId].authorities[_signer];
+        isAuthorized = states[_entityId-1].authorities[_signer];
         
         if(keccak256(abi.encode(_type)) == keccak256(abi.encode("District")))
-        isAuthorized = districts[_entityId].authorities[_signer];
-       
-        return isAuthorized;
-        
-    }
-    
-    function authorizeSigner(string memory _type, string memory _signer, uint _entityId, string memory _password) public view returns(bool){
-        
-        bool isAuthorized;
+        isAuthorized = districts[_entityId-1].authorities[_signer];
         
         if(keccak256(abi.encode(_type)) == keccak256(abi.encode("Distn. Point")))
-        isAuthorized = keccak256(bytes(dstnPoints[_entityId].authorities[_signer])) == keccak256(bytes(_password));
+        isAuthorized = dstnPoints[_entityId-1].authorities[_signer];
        
         return isAuthorized;
         
