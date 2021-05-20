@@ -1,0 +1,32 @@
+.addBeneficiary-container {
+  background-color: #3d3d3d;
+  min-height: 100vh;
+  padding: 10px 0;
+}
+
+.form-container {
+  background-color: #3f8f74;
+  padding: 100px 40px;
+  box-shadow: 0 0 15px rgb(29, 29, 29);
+  margin: 0 20vw !important;
+}
+
+.display-none {
+  display: none;
+}
+
+.center-align {
+  text-align: center;
+}
+
+.mediaContainer {
+  display: flex;
+  justify-content: center;
+  text-align: center;
+  padding: 7px;
+  background-color: white;
+  border-radius: 10px;
+}
+.media {
+  border-radius: 5px;
+}
