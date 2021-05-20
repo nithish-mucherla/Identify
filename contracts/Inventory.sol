@@ -4,11 +4,13 @@ pragma solidity >=0.5.0 <=0.8.4;
 import "./CredentialManager.sol";
 
 contract Inventory {
+    
+    string private secret = "identify@capstone";
 
     struct resourceTransaction {
         bytes32 id;
-        string initiator;
-        string receiver;
+        address initiator;
+        address receiver;
         string fromEntity; 
         string toEntity; 
         string entityLevel; 
@@ -22,8 +24,7 @@ contract Inventory {
     
     event newTxn(
         bytes32 txnId,
-        string initiator,
-        string indexed initiatorIndex,
+        address initiator,
         string indexed fromEntityIndex, //stores keccak256 hash of the string. To filter, filter using hash(key)
         string fromEntity,
         uint fromEntityId,
@@ -39,20 +40,19 @@ contract Inventory {
     event AckTxn(
         bytes32 txnId,
         uint receivedTimestamp,
-        string receiver,
+        address receiver,
         uint statusCode
     );
 
     event errorAckTxn (
         bytes32 txnId,
         uint receivedTimestamp,
-        string receiver,
+        address receiver,
         uint statusCode
     );
     
     struct TempTxn {
         bytes32 txnId;
-        string initiator;
         string fromEntity;
         uint fromEntityId;
         string toEntity;
@@ -61,12 +61,12 @@ contract Inventory {
         uint sentTimestamp;
         uint[] resourceQuantities;
         uint receivedTimestamp;
-        string password;
+        bytes32 token;
+        bool similar;
     }
     
     function sendTxn(
-        string memory _initiator, 
-        string memory _password, 
+        bytes32 _token, 
         string memory _fromEntity,
         uint _fromEntityId, 
         string memory _toEntity, 
@@ -75,7 +75,8 @@ contract Inventory {
         uint  _sentTimestamp, 
         uint _receivedTimestamp, 
         uint[] memory _resourceQuantities, 
-        address _credManagerAddress
+        address _credManagerAddress,
+        bool _similar
     ) public {
         
         CredentialManager cm = CredentialManager(_credManagerAddress);
@@ -83,7 +84,6 @@ contract Inventory {
         
         TempTxn memory tempTxn = TempTxn(
             keccak256(abi.encode(_fromEntity,_toEntity,_level,_sentTimestamp)), 
-            _initiator,
             _fromEntity,
             _fromEntityId,
             _toEntity,
@@ -92,48 +92,58 @@ contract Inventory {
             _sentTimestamp,
             _resourceQuantities,
             _receivedTimestamp,
-            _password
+            _token,
+            _similar
         );
         
-        uint receivedTimestamp;
-        bool isAuthorized;
-        if(keccak256(bytes(_level)) == keccak256(bytes("Distn. Point"))) 
-        {
-            receivedTimestamp = tempTxn.sentTimestamp;
-            isAuthorized = cm.authorizeSigner(tempTxn.level, tempTxn.initiator, tempTxn.fromEntityId, tempTxn.password);
-        }
-        else
-        {
-            receivedTimestamp = tempTxn.receivedTimestamp;
-            isAuthorized = cm.authorizeSigner(tempTxn.level, tempTxn.initiator, tempTxn.fromEntityId);
-        }
-        
         uint statusCode;
+        bool isAuthorized = cm.authorizeSigner(tempTxn.level, msg.sender, tempTxn.fromEntityId);
         
-        if(!isAuthorized)
+        if(isAuthorized)
         {
-            statusCode=401;
-        }
-        else {
+            if(keccak256(bytes(_level)) == keccak256(bytes("Distn. Point"))){
+                if(keccak256(
+                abi.encodePacked(
+                    tempTxn.fromEntity, 
+                    tempTxn.fromEntityId, 
+                    tempTxn.toEntity,
+                    tempTxn.toEntityId,
+                    tempTxn.level,
+                    tempTxn.sentTimestamp,
+                    tempTxn.receivedTimestamp,
+                    tempTxn.resourceQuantities,
+                    secret,
+                    tempTxn.similar
+                )) != tempTxn.token)
+                    statusCode=403;
+                else if(!tempTxn.similar)
+                    statusCode=4010;
+                else
+                    statusCode=200;
+                
+            }    
+            else
+                statusCode=200;
+        }else   
+            statusCode = 401;
+        
+        if(statusCode==200)
             resourceTxns[tempTxn.txnId] = resourceTransaction(
                 tempTxn.txnId, 
-                tempTxn.initiator, 
-                '', 
+                msg.sender, 
+                address(0), 
                 tempTxn.fromEntity, 
                 tempTxn.toEntity, 
                 tempTxn.level, 
                 tempTxn.sentTimestamp, 
-                receivedTimestamp, 
+                tempTxn.receivedTimestamp, 
                 tempTxn.resourceQuantities, 
                 true
             );
-            statusCode = 200;
-        }
         
         emit newTxn(
             tempTxn.txnId, 
-            tempTxn.initiator, 
-            tempTxn.initiator, 
+            msg.sender, 
             tempTxn.fromEntity, 
             tempTxn.fromEntity, 
             tempTxn.fromEntityId, 
@@ -141,14 +151,13 @@ contract Inventory {
             tempTxn.toEntityId, 
             tempTxn.level, 
             tempTxn.sentTimestamp, 
-            receivedTimestamp, 
+            tempTxn.receivedTimestamp, 
             tempTxn.resourceQuantities,
             statusCode
         );
     }
     
     function acknowledgeTxn(
-        string memory _reciever, 
         bytes32 _txnId, 
         uint _recvdTimestamp, 
         uint _entityId, 
@@ -157,19 +166,19 @@ contract Inventory {
     ) public {
         require(_recvdTimestamp>0, "Invalid timestamp");
         if(!resourceTxns[_txnId].created)
-            emit errorAckTxn(_txnId, _recvdTimestamp, _reciever,400);
+            emit errorAckTxn(_txnId, _recvdTimestamp, msg.sender,400);
         else {
             if(resourceTxns[_txnId].receivedTimestamp!=0) 
-                emit errorAckTxn(_txnId, _recvdTimestamp, _reciever, 4010);
+                emit errorAckTxn(_txnId, _recvdTimestamp, msg.sender, 4010);
             CredentialManager cm = CredentialManager(_credManagerAddress);
-            if(!cm.authorizeSigner(_level, _reciever, _entityId))
-                emit errorAckTxn(_txnId, _recvdTimestamp, _reciever, 4011);
+            if(!cm.authorizeSigner(_level, msg.sender, _entityId))
+                emit errorAckTxn(_txnId, _recvdTimestamp, msg.sender, 4011);
             else
             {
                 resourceTransaction storage txn = resourceTxns[_txnId];
                 txn.receivedTimestamp = _recvdTimestamp;
-                txn.receiver = _reciever;
-                emit AckTxn(_txnId, _recvdTimestamp, _reciever, 200);
+                txn.receiver = msg.sender;
+                emit AckTxn(_txnId, _recvdTimestamp, msg.sender, 200);
             }
         }             
     }

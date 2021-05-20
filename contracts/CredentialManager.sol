@@ -110,7 +110,8 @@ contract CredentialManager {
     
     
     function getBeneficiaries(uint _dstnPointId) public view returns(uint[] memory) {
-        require(beneficiaryCount>0, "No Beneficiary registered");
+        if(beneficiaryCount<=0)
+        return new uint[](0);
         require(_dstnPointId>=0 && _dstnPointId<dstnPoints.length, "Invalid DistributionPoint id");
         return dstnPoints[_dstnPointId-1].beneficiaryIds;
         //returns beneficiary Ids of a dstn point

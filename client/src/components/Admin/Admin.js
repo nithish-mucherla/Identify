@@ -25,27 +25,22 @@ const Admin = (props) => {
   return (
     <>
       <Grid container className="Admin" alignItems="center" justify="center">
-        <Grid className={loginStatus === 1 ? "admin-container " : ""} item>
-          {loginStatus === 1 ? (
-            <AddAuthority
-              web3={props.web3}
-              states={props.states}
-              districts={props.districts}
-              dstnPoints={props.dstnPoints}
-              credManagerInst={props.credManagerInst}
-              adminId={adminAccount}
-            />
-          ) : (
-            <Grid item>
-              <Button
-                className="buttonSecondary"
-                onClick={() => authenticate()}
-              >
-                Sign In
-              </Button>
-            </Grid>
-          )}
-        </Grid>
+        {loginStatus === 1 ? (
+          <AddAuthority
+            web3={props.web3}
+            states={props.states}
+            districts={props.districts}
+            dstnPoints={props.dstnPoints}
+            credManagerInst={props.credManagerInst}
+            adminId={adminAccount}
+          />
+        ) : (
+          <Grid item>
+            <Button className="buttonSecondary" onClick={() => authenticate()}>
+              Sign In
+            </Button>
+          </Grid>
+        )}
       </Grid>
       <Snackbar
         open={loginStatus === 2}

@@ -11,6 +11,7 @@ import CredManager from "./contracts/CredentialManager.json";
 import AckTxn from "./components/ackTxn/ackTxn.js";
 import { districtsList } from "./districtsList.js";
 import Admin from "./components/Admin/Admin";
+import AddBeneficiary from "./components/AddBeneficiary/AddBeneficiary";
 
 const PrivateKeyProvider = require("@truffle/hdwallet-provider");
 const privateKeys = [
@@ -327,7 +328,14 @@ const App = () => {
           credManagerInst={credManagerInst}
         />
       );
-    else if (view === "add beneficiary") return <div></div>;
+    else if (view === "add beneficiary")
+      return (
+        <AddBeneficiary
+          web3={web3}
+          dstnPoints={dstnPoints}
+          credManagerInst={credManagerInst}
+        />
+      );
   };
 
   return (

@@ -27,16 +27,11 @@ const AddAuthority = ({
     level: "",
     id: "",
     authorityId: "",
-    password: "",
   });
   const [error, setError] = useState({
     entityLevelSelect: false,
     entitySelect: false,
     authorityId: {
-      isValid: true,
-      errorMsg: "",
-    },
-    password: {
       isValid: true,
       errorMsg: "",
     },
@@ -59,30 +54,14 @@ const AddAuthority = ({
 
   const isValidId = (id) => {
     try {
-      if (entity.level === "Distn. Point") {
-        let errorMsg = "",
-          valid = true;
-        if (id.trim().length < 4) {
-          valid = false;
-          errorMsg = "Id must be atleast 4 characters long!";
-        }
-        setError({
-          ...error,
-          authorityId: {
-            isValid: valid,
-            errorMsg: errorMsg,
-          },
-        });
-      } else {
-        const address = web3.utils.toChecksumAddress("0x" + id.trim());
-        setError({
-          ...error,
-          authorityId: {
-            isValid: true,
-            errorMsg: "",
-          },
-        });
-      }
+      const address = web3.utils.toChecksumAddress("0x" + id.trim());
+      setError({
+        ...error,
+        authorityId: {
+          isValid: true,
+          errorMsg: "",
+        },
+      });
     } catch (e) {
       setError({
         ...error,
@@ -94,54 +73,26 @@ const AddAuthority = ({
     }
   };
 
-  const isValidPassword = (pass) => {
-    const regex = /^(?=.*[0-9])(?=.*[!@#$%^&*])[a-zA-Z0-9!@#$%^&*]{6,16}$/;
-    return regex.test(pass);
-  };
-
   const addAuthority = async () => {
     setLoading(true);
     try {
-      let credManagerInstance = new web3.eth.Contract(
-        CredManager.abi,
-        credManagerInst.address
-      );
       if (
         !error.entityLevelSelect &&
         !error.entitySelect &&
         error.authorityId.isValid
       ) {
-        let txnResult;
-
-        if (entity.level === "Distn. Point")
-          txnResult = await credManagerInstance.methods
-            .addAuthority(
-              {
-                State: 1,
-                District: 2,
-                "Distn. Point": 3,
-              }[entity.level],
-              parseInt(entity.id),
-              entity.authorityId,
-              entity.password
-            )
-            .send({
-              from: adminId,
-            });
-        else
-          txnResult = await credManagerInstance.methods
-            .addAuthority(
-              {
-                State: 1,
-                District: 2,
-                "Distn. Point": 3,
-              }[entity.level],
-              parseInt(entity.id),
-              entity.authorityId.toLowerCase()
-            )
-            .send({
-              from: adminId,
-            });
+        let txnResult = await credManagerInst.addAuthority(
+          {
+            State: 1,
+            District: 2,
+            "Distn. Point": 3,
+          }[entity.level],
+          parseInt(entity.id),
+          "0x" + entity.authorityId,
+          {
+            from: adminId,
+          }
+        );
 
         console.log(
           {
@@ -174,31 +125,28 @@ const AddAuthority = ({
 
   const checkAuthority = async () => {
     let txnResult;
-    if (entity.level === "Distn. Point")
-      txnResult = await credManagerInst.authorizeSigner(
-        entity.level,
-        entity.authorityId,
-        parseInt(entity.id),
-        entity.password
-      );
-    else
-      txnResult = await credManagerInst.authorizeSigner(
-        entity.level,
-        entity.authorityId.toLowerCase(),
-        parseInt(entity.id)
-      );
+    txnResult = await credManagerInst.authorizeSigner(
+      entity.level,
+      "0x" + entity.authorityId,
+      parseInt(entity.id)
+    );
 
     alert(txnResult);
   };
+
   return (
-    <Grid container direction="column" alignItems="center">
+    <>
       {loading ? (
-        <Grid item>
-          <img src={Loader} alt="loading" />
-        </Grid>
+        <img src={Loader} alt="loading" />
       ) : (
-        <>
-          <Grid container direction="column">
+        <Grid
+          container
+          direction="column"
+          alignItems="center"
+          className="formContainer"
+          justify="center"
+        >
+          <Grid container direction="column" alignItems="center">
             <Grid item>
               <FormControl variant="filled">
                 <InputLabel htmlFor="entityLevel">Entity Level*</InputLabel>
@@ -263,7 +211,7 @@ const AddAuthority = ({
                   <option aria-label="None" value="" />
                   {entity.level &&
                     entities.map((e, i) => (
-                      <option value={parseInt(e.returnValues._id) - 1} key={i}>
+                      <option value={e.returnValues._id} key={i}>
                         {e.returnValues._name}
                       </option>
                     ))}
@@ -305,69 +253,32 @@ const AddAuthority = ({
                 </FormHelperText>
               </FormControl>
             </Grid>
-            {entity.level === "Distn. Point" && (
+            <Grid
+              container
+              item
+              direction="column"
+              alignItems="center"
+              className="buttonGroup"
+            >
               <Grid item>
-                <br />
-                <FormControl>
-                  <TextField
-                    size="small"
-                    label="Password*"
-                    type="password"
-                    value={entity.password}
-                    error={!error.password.isValid}
-                    onChange={(e) => {
-                      let passwordValidity = isValidPassword(e.target.value);
-                      setEntity({ ...entity, password: e.target.value });
-                      setError({
-                        ...error,
-                        password: {
-                          isValid: passwordValidity,
-                          errorMsg: passwordValidity
-                            ? ""
-                            : "Password Requirements: length must be between 5 and 17 characters. Atleast 1 spcl character and a number",
-                        },
-                      });
-                    }}
-                  />
-                  <FormHelperText className="errorText">
-                    {error.password.errorMsg ? (
-                      <>
-                        <ErrorIcon fontSize="small" /> &nbsp;{" "}
-                        {error.password.errorMsg}
-                      </>
-                    ) : (
-                      ""
-                    )}
-                  </FormHelperText>
-                </FormControl>
+                <Button
+                  className="buttonSecondary"
+                  onClick={() => addAuthority()}
+                >
+                  Add
+                </Button>
               </Grid>
-            )}
-          </Grid>
-          <Grid
-            container
-            direction="column"
-            alignItems="flex-end"
-            justify="center"
-            className="buttonGroup"
-          >
-            <Grid item>
-              <Button
-                className="buttonSecondary"
-                onClick={() => addAuthority()}
-              >
-                Add
-              </Button>
-            </Grid>
-            <Grid item>
-              <Button
-                className="buttonSecondary"
-                onClick={() => checkAuthority()}
-              >
-                Verify Authorization
-              </Button>
+              <Grid item>
+                <Button
+                  className="buttonSecondary"
+                  onClick={() => checkAuthority()}
+                >
+                  Verify Authorization
+                </Button>
+              </Grid>
             </Grid>
           </Grid>
-        </>
+        </Grid>
       )}
 
       <Snackbar
@@ -394,7 +305,7 @@ const AddAuthority = ({
       >
         <SnackbarContent className="errorSnack" message={errorSnack.msg} />
       </Snackbar>
-    </Grid>
+    </>
   );
 };
 

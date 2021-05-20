@@ -15,12 +15,6 @@ const encryptWithAES = (text, secret) => {
   return CryptoJS.AES.encrypt(text, secret).toString();
 };
 
-const decryptWithAES = (ciphertext, secret) => {
-  const bytes = CryptoJS.AES.decrypt(ciphertext, secret);
-  const originalText = bytes.toString(CryptoJS.enc.Utf8);
-  return originalText;
-};
-
 //Add beneficiary post req
 const secret = "identify@capstone";
 router.post("/", (req, res, next) => {

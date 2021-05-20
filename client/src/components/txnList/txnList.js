@@ -77,7 +77,6 @@ function TxnList(props) {
         {
           topics: [
             null,
-            !(filter.initiator.length === 0) ? filter.initiator : null,
             filter.fromEntity.isSet
               ? [
                   filter.fromEntity.central[0] &&

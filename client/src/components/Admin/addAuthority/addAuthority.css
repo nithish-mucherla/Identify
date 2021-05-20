@@ -1,3 +1,10 @@
+.formContainer {
+  background-color: #3f8f74;
+  padding: 100px 40px;
+  box-shadow: 0 0 15px rgb(29, 29, 29);
+  margin: 0 20vw;
+}
+
 .errorText {
   display: flex !important;
   color: #f5f5f5 !important;
@@ -6,7 +13,7 @@
 }
 
 .successSnack {
-  background-color: #09d3ac !important;
+  background-color: #3f8f74 !important;
   color: white !important;
   letter-spacing: 0.1em;
 }
