@@ -32,8 +32,9 @@ router.post("/", async (req, res, next) => {
   const beneficiaryData = await credManagerInstance.beneficiaries(
     beneficiaryId
   );
-
-  if (beneficiaryData.isRegistered) {
+  console.log(beneficiaryData);
+  const finalStatus = beneficiaryData.finalStatus.toNumber();
+  if (finalStatus === 1) {
     const credentialResponse = await fetch(
       "https://ipfs.infura.io/ipfs/" +
         decryptWithAES(beneficiaryData.credentials, secret),
@@ -79,7 +80,7 @@ router.post("/", async (req, res, next) => {
       })
       .catch((err) => res.status(300).send("Server Error"));
   } else {
-    res.status(400).send("Bad Request");
+    res.status(400).send(`${finalStatus}`);
   }
 });
 

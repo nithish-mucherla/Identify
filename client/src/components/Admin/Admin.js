@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import "./Admin.css";
 import { Grid, Button, Snackbar, SnackbarContent } from "@material-ui/core";
 import AddAuthority from "./addAuthority/addAuthority";
+import Nav from "../nav/nav";
 
 const Admin = (props) => {
   const [loginStatus, setLoginStatus] = useState(0); // 0: Didn't Sign in, 1: success, 2: unAuthorized
@@ -24,7 +25,14 @@ const Admin = (props) => {
   }, []);
   return (
     <>
-      <Grid container className="Admin" alignItems="center" justify="center">
+      <Grid
+        container
+        className="Admin"
+        alignItems="center"
+        justify="center"
+        direction="column"
+      >
+        <Nav setView={props.setView} />
         {loginStatus === 1 ? (
           <AddAuthority
             web3={props.web3}

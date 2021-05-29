@@ -6,9 +6,16 @@
 
 .form-container {
   background-color: #3f8f74;
-  padding: 100px 40px;
+  padding: 80px 20px;
   box-shadow: 0 0 15px rgb(29, 29, 29);
-  margin: 0 20vw !important;
+  width: auto !important;
+  min-width: 70% !important;
+}
+
+.subNav {
+  padding-bottom: 60px;
+  font-size: 14px;
+  letter-spacing: 0.05em;
 }
 
 .display-none {

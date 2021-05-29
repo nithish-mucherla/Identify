@@ -242,7 +242,7 @@ export default function TxnForm(props) {
             };
             console.log(requestData);
             const response = await fetch(
-              "http://localhost:5000/authBeneficiary",
+              "http://127.0.0.1:5000/authBeneficiary",
               {
                 method: "POST",
                 headers: {

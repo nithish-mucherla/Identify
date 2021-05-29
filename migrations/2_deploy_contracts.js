@@ -4,6 +4,6 @@ var CredManager = artifacts.require("./CredentialManager");
 
 module.exports = function (deployer) {
   deployer.deploy(Inventories);
-  deployer.deploy(Resources, { overwrite: false });
+  deployer.deploy(Resources);
   deployer.deploy(CredManager);
 };

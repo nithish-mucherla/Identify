@@ -42,7 +42,7 @@ function TxnList(props) {
       "Distn. Point": "",
     },
   });
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [dialogView, setDialogView] = useState(false);
   const [ackTxnList, setAckTxnList] = useState({});
 

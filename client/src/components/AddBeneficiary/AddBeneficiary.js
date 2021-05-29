@@ -1,4 +1,5 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
+import exifr from "exifr";
 import {
   Grid,
   Select,
@@ -9,19 +10,24 @@ import {
   Button,
   Snackbar,
   SnackbarContent,
+  Link,
 } from "@material-ui/core";
 import Loader from "../../loader.gif";
 import ErrorIcon from "@material-ui/icons/Error";
 import "./AddBeneficiary.css";
+import Nav from "../nav/nav";
+import EXIF from "exif-js";
+import AuthRequests from "./ListBeneficiaryAuthRequests/AuthRequests";
 
-const AddBeneficiary = ({ web3, dstnPoints, credManagerInst }) => {
+const AddBeneficiary = ({ web3, dstnPoints, credManagerInst, setView }) => {
   const [formdata, setFormdata] = useState({
     id: "",
-    distnId: "",
     credentials: {
       image: "",
     },
   });
+
+  const [distnId, setdistnId] = useState("");
 
   const [errors, setErrors] = useState({
     id: "",
@@ -41,6 +47,9 @@ const AddBeneficiary = ({ web3, dstnPoints, credManagerInst }) => {
     msg: "",
   });
 
+  const [sectionView, setSectionView] = useState("addBeneficiary");
+  const [activeAuthority, setActiveAuthority] = useState(""); //logged in authority id
+
   const player = useRef(),
     canvas = useRef();
 
@@ -59,6 +68,11 @@ const AddBeneficiary = ({ web3, dstnPoints, credManagerInst }) => {
     // Attach the video stream to the video element and autoplay.
     navigator.mediaDevices.getUserMedia(constraints).then((stream) => {
       player.current.srcObject = stream;
+      const track = stream.getVideoTracks()[0];
+      let imageCapture = new ImageCapture(track);
+      imageCapture.takePhoto().then((blob) => {
+        exifr.gps(blob).then((data) => console.log(data));
+      });
     });
   };
 
@@ -72,6 +86,7 @@ const AddBeneficiary = ({ web3, dstnPoints, credManagerInst }) => {
       canvas.current.width,
       canvas.current.height
     );
+
     setVideoView(false);
     setFormdata({
       ...formdata,
@@ -94,7 +109,7 @@ const AddBeneficiary = ({ web3, dstnPoints, credManagerInst }) => {
     try {
       if (
         formdata.id.toString().length !== 12 ||
-        formdata.distnId < 0 ||
+        !distnId ||
         !formdata.credentials.image
       ) {
         console.log("errors");
@@ -104,8 +119,7 @@ const AddBeneficiary = ({ web3, dstnPoints, credManagerInst }) => {
         if (formdata.id.toString().length !== 12)
           idError = "Beneficiary id must be 12 characters long";
 
-        if (!formdata.distnId)
-          distnError = "Please select a distribution point";
+        if (!distnId) distnError = "Please select a distribution point";
 
         if (!formdata.credentials.image)
           imageError = "Beneficiary image is needed";
@@ -123,20 +137,25 @@ const AddBeneficiary = ({ web3, dstnPoints, credManagerInst }) => {
       const accounts = await window.ethereum.request({
         method: "eth_requestAccounts",
       });
-      const response = await fetch("http://localhost:5000/addBeneficiary", {
+      const response = await fetch("http://127.0.0.1:5000/addBeneficiary", {
         method: "POST",
         headers: {
           "content-type": "application/json",
         },
-        body: JSON.stringify(formdata),
+        body: JSON.stringify({
+          ...formdata,
+          distnId: distnId,
+          approvalStatus: 1,
+        }),
       });
       console.log(response);
       if (response.status === 200) {
         const responseData = await response.json();
-        const txnResult = await credManagerInst.addBeneficiary(
+        const txnResult = await credManagerInst.initiateBeneficiaryRegistration(
           responseData.id,
           responseData.credentials,
           responseData.distnId,
+          responseData.approvalStatus,
           responseData.token,
           {
             from: accounts[0],
@@ -144,13 +163,22 @@ const AddBeneficiary = ({ web3, dstnPoints, credManagerInst }) => {
         );
         console.log(txnResult);
         const _statusCode = parseInt(txnResult.logs[0].args._statusCode);
+        const _finalStatus = parseInt(txnResult.logs[0].args._finalStatus);
+        console.log(_finalStatus);
         if (_statusCode === 200) {
-          setSuccessSnack({ view: true, msg: "Beneficiary Added succesfully" });
+          setSuccessSnack({
+            view: true,
+            msg: "Beneficiary registration initated successfully",
+          });
           console.log(200);
         } else if (_statusCode === 409) {
           setErrorSnack({
             view: true,
-            msg: "Beneficiary alredy registered to the scheme",
+            msg: {
+              1: "Beneficiary alredy registered to the scheme",
+              2: "Beneficiary has already been rejected!",
+              3: "Beneficiary registration already in process",
+            }[_finalStatus],
           });
           console.log(409);
         } else if (_statusCode === 401) {
@@ -178,16 +206,85 @@ const AddBeneficiary = ({ web3, dstnPoints, credManagerInst }) => {
     setLoading(false);
   };
 
+  const DpointFormControl = () => {
+    return (
+      <FormControl variant="filled">
+        <InputLabel htmlFor="dpointsList">Distribution Point Id*</InputLabel>
+        <Select
+          error={!errors.distnId === ""}
+          value={distnId}
+          native
+          onChange={(e) => {
+            setdistnId(e.target.value);
+            setErrors((prevErrors) => {
+              return {
+                ...prevErrors,
+                distnId: "",
+              };
+            });
+          }}
+        >
+          <option aria-label="None" value="" />
+          {dstnPoints.map((dp, i) => (
+            <option value={dp.returnValues._id} key={i}>
+              {dp.returnValues._name}
+            </option>
+          ))}
+        </Select>
+        <FormHelperText className="errorText">
+          {errors.distnId === "" ? (
+            ""
+          ) : (
+            <>
+              <ErrorIcon fontSize="small" />
+              &nbsp; {errors.distnId}
+            </>
+          )}
+        </FormHelperText>
+      </FormControl>
+    );
+  };
+
+  const [loginStatus, setLoginStatus] = useState(0);
+
+  const authorizeAuthority = async () => {
+    if (!distnId) {
+      setErrors({ ...errors, distnId: "Please select a distribution point!" });
+      return;
+    }
+    const accounts = await window.ethereum.request({
+      method: "eth_requestAccounts",
+    });
+    const isAuthorized =
+      distnId &&
+      (await credManagerInst.authorizeSigner(
+        "Distn. Point",
+        accounts[0],
+        parseInt(distnId)
+      ));
+    setLoginStatus(isAuthorized ? 1 : 2);
+    setActiveAuthority(isAuthorized ? accounts[0] : "");
+  };
+
+  useEffect(() => {
+    window.ethereum.addListener("accountsChanged", authorizeAuthority);
+    return () => {
+      window.ethereum.removeListener("accountsChanged", authorizeAuthority);
+    };
+  }, [authorizeAuthority]);
+
   return loading ? (
     <img src={Loader} alt="loader" className="loader" />
   ) : (
     <>
       <Grid
         container
+        justify="space-evenly"
         alignItems="center"
-        justify="center"
+        direction="column"
         className="addBeneficiary-container"
       >
+        <Nav setView={setView} />
         <Grid
           container
           item
@@ -195,142 +292,186 @@ const AddBeneficiary = ({ web3, dstnPoints, credManagerInst }) => {
           alignItems="center"
           className="form-container"
         >
-          <Grid item>
-            <FormControl variant="filled">
-              <TextField
-                label="Beneficiary Id*"
-                size="small"
-                value={formdata.id}
-                error={!errors.msg === ""}
-                onChange={(e) => {
-                  setFormdata({ ...formdata, id: e.target.value });
-                  setErrors((prevErrors) => {
-                    return {
-                      ...prevErrors,
-                      id: "",
-                    };
-                  });
-                }}
-              />
-              <FormHelperText className="errorText">
-                {errors.id === "" ? (
-                  ""
-                ) : (
-                  <>
-                    <ErrorIcon fontSize="small" />
-                    &nbsp; {errors.id}
-                  </>
-                )}
-              </FormHelperText>
-            </FormControl>
-            <br />
-            <br />
-          </Grid>
-          <Grid item>
-            <FormControl variant="filled">
-              <InputLabel htmlFor="dpointsList">
-                Distribution Point Id*
-              </InputLabel>
-              <Select
-                error={!errors.distnId === ""}
-                value={formdata.distnId}
-                native
-                onChange={(e) => {
-                  setFormdata({ ...formdata, distnId: e.target.value });
-                  setErrors((prevErrors) => {
-                    return {
-                      ...prevErrors,
-                      distnId: "",
-                    };
-                  });
-                }}
-              >
-                <option aria-label="None" value="" />
-                {dstnPoints.map((dp, i) => (
-                  <option value={dp.returnValues._id} key={i}>
-                    {dp.returnValues._name}
-                  </option>
-                ))}
-              </Select>
-              <FormHelperText className="errorText">
-                {errors.distnId === "" ? (
-                  ""
-                ) : (
-                  <>
-                    <ErrorIcon fontSize="small" />
-                    &nbsp; {errors.distnId}
-                  </>
-                )}
-              </FormHelperText>
-            </FormControl>
-            <br />
-            <br />
-          </Grid>
+          {loginStatus === 1 ? (
+            <>
+              <Grid item className="subNav">
+                <Link
+                  className="link"
+                  underline="none"
+                  onClick={() => {
+                    setSectionView("addBeneficiary");
+                  }}
+                >
+                  New Beneficiary
+                </Link>{" "}
+                /{" "}
+                <Link
+                  className="link"
+                  underline="none"
+                  onClick={() => {
+                    setSectionView("registrationRequests");
+                  }}
+                >
+                  Registration Requests
+                </Link>
+              </Grid>
 
-          <Grid item className={!videoView ? "display-none" : "center-align"}>
-            <div className="mediaContainer">
-              <video
-                ref={player}
-                autoPlay
-                width="240"
-                height="180"
-                className="media"
-              />
-            </div>
-
-            <br />
-            <Button onClick={() => captureImage()} className="buttonSecondary">
-              Capture
-            </Button>
-          </Grid>
-
-          <Grid
-            item
-            className={
-              !formdata.credentials.image ? "display-none" : "center-align"
-            }
-          >
-            <div className="mediaContainer">
-              <canvas ref={canvas} width="240" height="180" className="media" />
-            </div>
-            <br />
-            <Button
-              onClick={() => {
-                setFormdata({ ...formdata, credentials: { image: "" } });
-                startStream();
-              }}
-              className="buttonSecondary"
-            >
-              Retake
-            </Button>
-          </Grid>
-          <Grid item>
-            <FormHelperText className="errorText">
-              {errors.credentials.image === "" ? (
-                ""
-              ) : (
+              {sectionView === "addBeneficiary" ? (
                 <>
-                  <ErrorIcon fontSize="small" />
-                  &nbsp; {errors.credentials.image}
+                  <Grid item>
+                    <FormControl variant="filled">
+                      <TextField
+                        label="Beneficiary Id*"
+                        size="small"
+                        value={formdata.id}
+                        error={!errors.msg === ""}
+                        onChange={(e) => {
+                          setFormdata({ ...formdata, id: e.target.value });
+                          setErrors((prevErrors) => {
+                            return {
+                              ...prevErrors,
+                              id: "",
+                            };
+                          });
+                        }}
+                      />
+                      <FormHelperText className="errorText">
+                        {errors.id === "" ? (
+                          ""
+                        ) : (
+                          <>
+                            <ErrorIcon fontSize="small" />
+                            &nbsp; {errors.id}
+                          </>
+                        )}
+                      </FormHelperText>
+                    </FormControl>
+                    <br />
+                    <br />
+                  </Grid>
+                  {/* <Grid item>
+                    <DpointFormControl />
+                    <br />
+                    <br />
+                  </Grid> */}
+
+                  <Grid
+                    item
+                    className={!videoView ? "display-none" : "center-align"}
+                  >
+                    <div className="mediaContainer">
+                      <video
+                        ref={player}
+                        autoPlay
+                        width="240"
+                        height="180"
+                        className="media"
+                      />
+                    </div>
+
+                    <br />
+                    <Button
+                      onClick={() => captureImage()}
+                      className="buttonSecondary"
+                    >
+                      Capture
+                    </Button>
+                  </Grid>
+
+                  <Grid
+                    item
+                    className={
+                      !formdata.credentials.image
+                        ? "display-none"
+                        : "center-align"
+                    }
+                  >
+                    <div className="mediaContainer">
+                      <canvas
+                        ref={canvas}
+                        width="240"
+                        height="180"
+                        className="media"
+                      />
+                    </div>
+                    <br />
+                    <Button
+                      onClick={() => {
+                        setFormdata({
+                          ...formdata,
+                          credentials: { image: "" },
+                        });
+                        startStream();
+                      }}
+                      className="buttonSecondary"
+                    >
+                      Retake
+                    </Button>
+                  </Grid>
+                  <Grid item>
+                    <FormHelperText className="errorText">
+                      {errors.credentials.image === "" ? (
+                        ""
+                      ) : (
+                        <>
+                          <ErrorIcon fontSize="small" />
+                          &nbsp; {errors.credentials.image}
+                        </>
+                      )}
+                    </FormHelperText>
+                  </Grid>
+                  <Grid item>
+                    <Button
+                      onClick={() => startStream()}
+                      className="buttonSecondary"
+                    >
+                      Add Beneficiary Image
+                    </Button>
+                  </Grid>
+                  <Grid item>
+                    <Button
+                      onClick={() => addBeneficiary()}
+                      className="buttonPrimary"
+                    >
+                      Add Beneficiary
+                    </Button>
+                  </Grid>
                 </>
+              ) : (
+                <AuthRequests
+                  activeAuthority={activeAuthority}
+                  web3={web3}
+                  credManagerInst={credManagerInst}
+                  distnId={distnId}
+                />
               )}
-            </FormHelperText>
-          </Grid>
-          <Grid item>
-            <Button onClick={() => startStream()} className="buttonSecondary">
-              Add Beneficiary Image
-            </Button>
-          </Grid>
-          <Grid item>
-            <Button
-              onClick={() => addBeneficiary()}
-              className="buttonSecondary"
-            >
-              Add Beneficiary
-            </Button>
-          </Grid>
+            </>
+          ) : (
+            <>
+              <DpointFormControl />
+              <Grid item>
+                <Button
+                  className="buttonSecondary"
+                  onClick={() => authorizeAuthority()}
+                >
+                  Sign In
+                </Button>
+              </Grid>
+              <Snackbar
+                open={loginStatus === 2}
+                autoHideDuration={6000}
+                onClose={() => setLoginStatus(0)}
+              >
+                <SnackbarContent
+                  className="error"
+                  message={<span>You're Not Authorized</span>}
+                />
+              </Snackbar>
+            </>
+          )}
         </Grid>
       </Grid>
+
       <Snackbar
         open={successSnack.view}
         autoHideDuration={6000}

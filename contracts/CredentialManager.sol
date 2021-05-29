@@ -36,6 +36,7 @@ contract CredentialManager {
         uint districtId;
         uint[] beneficiaryIds;
         mapping(address=>bool) authorities;
+        address[] authoritiesList;
         string name;
     }
     
@@ -43,7 +44,9 @@ contract CredentialManager {
         uint id;
         uint dstnId;
         string credentials;
-        bool isRegistered;
+        address[] approved;
+        address[] rejected;
+        uint finalStatus; //1-accept, 2-reject, 3-pending, 0-default
     }
     
     string private secret = "identify@capstone";
@@ -58,7 +61,17 @@ contract CredentialManager {
     event NewDistrict(uint _id, string _name,uint _stateId);
     event NewDstnPoint(uint _id, string _name, uint _districtId);
     event NewAuthority(uint _level, uint _entityId, address _authorityId);
-    event NewBeneficiary(uint _id, string _credentials, address _registeredBy, uint _dstnId, uint _statusCode);
+    event NewBeneficiary(uint _id, uint _finalStatus, string _credentials, uint _dstnId, uint _statusCode);
+    event BeneficiaryValidation(
+        address _initiator,
+        uint indexed _id, 
+        uint _dstnId, 
+        string _credentials, 
+        address[] _accepted, 
+        address[] _rejected, 
+        uint _finalStatus, 
+        uint _statusCode
+    );
     
     function addState(string memory _name) public{
         states.push();
@@ -86,29 +99,105 @@ contract CredentialManager {
         emit NewDstnPoint(dp.id, _dstnPointName, _districtId);
     }
     
-    function addBeneficiary(uint _id, string memory _credentials, uint _dstnId, bytes32 _token) public{
+    function getToken(uint _id, string memory _credentials, uint _dstnId, uint _approvalStatus) public view returns(bytes32){
+        return keccak256(abi.encodePacked(_id,_dstnId,_credentials,_approvalStatus,secret));
+    }
+
+    function authBeneficiary(uint _id, uint _dstnId, uint _approvalStatus) public{ 
         if(authorizeSigner("Distn. Point", msg.sender, _dstnId))
         {
-            if(beneficiaries[_id].isRegistered)
-                emit NewBeneficiary(_id, _credentials, msg.sender, _dstnId, 409); //Beneficiary already registered
-            else {
+            if(beneficiaries[_id].finalStatus!=0) {
+                if(_approvalStatus==2)
+                beneficiaries[_id].rejected.push(msg.sender);
+                else if(_approvalStatus==1)
+                beneficiaries[_id].approved.push(msg.sender);
                 
-                if(keccak256(abi.encodePacked(_id,_dstnId,_credentials,secret)) == _token)
+                uint authorityCount = dstnPoints[_dstnId-1].authoritiesList.length;
+                uint acceptanceCount = beneficiaries[_id].approved.length;
+                uint rejectionCount = beneficiaries[_id].rejected.length;
+                if(2*rejectionCount>=authorityCount)
+                    beneficiaries[_id].finalStatus=2;
+                else if(2*acceptanceCount>authorityCount)
                 {
+                    beneficiaries[_id].finalStatus=1;
                     dstnPoints[_dstnId-1].beneficiaryIds.push(_id);
-                    beneficiaries[_id] = Beneficiary(_id, _dstnId, _credentials, true);
                     beneficiaryCount+=1;
-                    emit NewBeneficiary(_id, _credentials, msg.sender, _dstnId, 200); //200 succesfully added
+                    
+                    emit NewBeneficiary(_id, 1, beneficiaries[_id].credentials, _dstnId, 200); //200 succesfully added
+                }
+                
+                emit BeneficiaryValidation(
+                    msg.sender,
+                    _id, 
+                    _dstnId, 
+                    beneficiaries[_id].credentials,
+                    beneficiaries[_id].approved, 
+                    beneficiaries[_id].rejected,
+                    beneficiaries[_id].finalStatus,
+                    200
+                );
+            }
+            else
+                emit BeneficiaryValidation(
+                    msg.sender,
+                    _id, 
+                    _dstnId, 
+                    beneficiaries[_id].credentials,
+                    beneficiaries[_id].approved, 
+                    beneficiaries[_id].rejected,
+                    beneficiaries[_id].finalStatus,
+                    403
+                );
+        }
+        else 
+            emit BeneficiaryValidation(
+                msg.sender,
+                _id, 
+                _dstnId, 
+                beneficiaries[_id].credentials,
+                beneficiaries[_id].approved, 
+                beneficiaries[_id].rejected,
+                2,
+                401
+            ); 
+    }
+    
+    function initiateBeneficiaryRegistration(uint _id, string memory _credentials, uint _dstnId, uint _approvalStatus, bytes32 _token) public{
+        if(authorizeSigner("Distn. Point", msg.sender, _dstnId)) {
+            if(beneficiaries[_id].finalStatus!=0)
+                emit NewBeneficiary(_id, beneficiaries[_id].finalStatus, _credentials, _dstnId, 409); //Beneficiary registration started (finalStatus-3) / _accepted-1 / rejected-2
+            else {
+                if(keccak256(abi.encodePacked(_id,_dstnId,_credentials,_approvalStatus,secret)) == _token) {
+                    Beneficiary memory br;
+                    br.id = _id;
+                    br.dstnId = _dstnId;
+                    br.credentials = _credentials;
+                    br.approved = new address[](1);
+                    br.approved[0] = msg.sender;
+                    br.rejected = new address[](0);
+                    br.finalStatus = 3;
+                    
+                    beneficiaries[_id] = br;
+                
+                    emit BeneficiaryValidation(
+                        msg.sender,
+                        _id, 
+                        _dstnId, 
+                        _credentials,
+                        beneficiaries[_id].approved, 
+                        beneficiaries[_id].rejected,
+                        3,
+                        200
+                    ); 
                 }
                 else
-                    emit NewBeneficiary(_id, _credentials, msg.sender, _dstnId, 403); // 403 :  Forbidden action as tokens mismatch 
+                    emit NewBeneficiary(_id, beneficiaries[_id].finalStatus, _credentials, _dstnId, 403); // 403 :  Forbidden action as tokens mismatch
             }
         }
         else
-            emit NewBeneficiary(_id, _credentials, msg.sender, _dstnId, 401);  //401 authority not authorized to add Beneficiary
+            emit NewBeneficiary(_id, beneficiaries[_id].finalStatus, _credentials, _dstnId, 401);  //401 authority not authorized to add Beneficiary
     }
-    
-    
+
     function getBeneficiaries(uint _dstnPointId) public view returns(uint[] memory) {
         if(beneficiaryCount<=0)
         return new uint[](0);
@@ -124,7 +213,10 @@ contract CredentialManager {
         else if(_level==2)
         districts[_entityId-1].authorities[_authorityId] = true;
         else if(_level==3)
-        dstnPoints[_entityId-1].authorities[_authorityId] = true;
+        {
+            dstnPoints[_entityId-1].authorities[_authorityId] = true;
+            dstnPoints[_entityId-1].authoritiesList.push(_authorityId);
+        }
         emit NewAuthority(_level, _entityId, _authorityId);
     }
 

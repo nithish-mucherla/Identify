@@ -33,7 +33,7 @@ const App = () => {
   const [states, setStates] = useState([]);
   const [districts, setDistricts] = useState([]);
   const [dstnPoints, setDstnPoints] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [credManagerInst, setCredManagerInst] = useState(null);
 
   useEffect(() => {
@@ -43,9 +43,11 @@ const App = () => {
       const credManagerContract = TruffleContract(CredManager);
       credManagerContract.setProvider(web3.currentProvider);
       const credManagerInstance = await credManagerContract.deployed();
-      loadData(credManagerInstance, "NewState", setStates);
-      loadData(credManagerInstance, "NewDistrict", setDistricts);
-      loadData(credManagerInstance, "NewDstnPoint", setDstnPoints);
+      await Promise.all([
+        loadData(credManagerInstance, "NewState", setStates),
+        loadData(credManagerInstance, "NewDistrict", setDistricts),
+        loadData(credManagerInstance, "NewDstnPoint", setDstnPoints),
+      ]);
       setWeb3(web3);
       setCredManagerInst(credManagerInstance);
       setLoading(false);
@@ -321,6 +323,7 @@ const App = () => {
     else if (view === "admin")
       return (
         <Admin
+          setView={setView}
           web3={web3}
           states={states}
           districts={districts}
@@ -331,6 +334,7 @@ const App = () => {
     else if (view === "add beneficiary")
       return (
         <AddBeneficiary
+          setView={setView}
           web3={web3}
           dstnPoints={dstnPoints}
           credManagerInst={credManagerInst}

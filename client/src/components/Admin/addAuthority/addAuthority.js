@@ -262,7 +262,7 @@ const AddAuthority = ({
             >
               <Grid item>
                 <Button
-                  className="buttonSecondary"
+                  className="buttonPrimary"
                   onClick={() => addAuthority()}
                 >
                   Add

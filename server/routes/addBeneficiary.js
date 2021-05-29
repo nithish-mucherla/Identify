@@ -25,7 +25,13 @@ router.post("/", (req, res, next) => {
     data.id.toString().length != 12 ||
     !data.distnId ||
     data.distnId < 0 ||
-    !data.credentials.image
+    !data.credentials.image ||
+    !data.approvalStatus ||
+    !(
+      data.approvalStatus == 1 ||
+      data.approvalStatus == 2 ||
+      data.approvalStatus == 3
+    )
   ) {
     res.status(400).send("Bad Request");
     return;
@@ -41,6 +47,7 @@ router.post("/", (req, res, next) => {
       id: data.id,
       distnId: data.distnId,
       credentials: encCredentials,
+      approvalStatus: data.approvalStatus,
     };
     res.status(200).send({
       ...responseData,
@@ -48,6 +55,7 @@ router.post("/", (req, res, next) => {
         { type: "uint", value: data.id },
         { type: "uint", value: data.distnId },
         { type: "string", value: encCredentials },
+        { type: "uint", value: data.approvalStatus },
         { type: "string", value: secret }
       ),
     });
