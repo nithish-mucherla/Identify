@@ -73,6 +73,13 @@ contract CredentialManager {
         uint _statusCode
     );
     
+    event BeneficiaryValidationRemarks(
+        uint indexed _id,
+        uint indexed _dstnId, 
+        address indexed _authorityId,
+        string _comment
+    );
+    
     function addState(string memory _name) public{
         states.push();
         State storage s = states[states.length-1];
@@ -103,7 +110,7 @@ contract CredentialManager {
         return keccak256(abi.encodePacked(_id,_dstnId,_credentials,_approvalStatus,secret));
     }
 
-    function authBeneficiary(uint _id, uint _dstnId, uint _approvalStatus) public{ 
+    function authBeneficiary(uint _id, uint _dstnId, uint _approvalStatus, string memory _comment) public{ 
         if(authorizeSigner("Distn. Point", msg.sender, _dstnId))
         {
             if(beneficiaries[_id].finalStatus!=0) {
@@ -136,6 +143,7 @@ contract CredentialManager {
                     beneficiaries[_id].finalStatus,
                     200
                 );
+                emit BeneficiaryValidationRemarks(_id, _dstnId, msg.sender, _comment);
             }
             else
                 emit BeneficiaryValidation(

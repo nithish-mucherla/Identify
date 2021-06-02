@@ -1,7 +1,16 @@
-import React from "react";
-import { Button, Chip, Grid, Paper } from "@material-ui/core";
+import React, { useState } from "react";
+import {
+  Button,
+  Chip,
+  Grid,
+  Paper,
+  TextField,
+  FormControl,
+  FormHelperText,
+} from "@material-ui/core";
 import "./RequestItem.css";
 import Identicon from "identicon.js";
+import ErrorIcon from "@material-ui/icons/Error";
 const RequestItem = ({
   id,
   authorityId,
@@ -12,23 +21,34 @@ const RequestItem = ({
   rejectedAuths,
   credManagerInst,
   setLoading,
+  remark,
 }) => {
-  let hasApproved, hasRejected;
+  let hasApproved, hasRejected, authAction;
 
-  if (finalRegistrationStatus === 3) {
-    hasApproved =
-      approvedAuths.findIndex(
-        (id) => id.toLowerCase() === authorityId.toLowerCase()
-      ) >= 0;
-    hasRejected =
-      rejectedAuths.findIndex(
-        (id) => id.toLowerCase() === authorityId.toLowerCase()
-      ) >= 0;
+  hasApproved =
+    approvedAuths.findIndex(
+      (id) => id.toLowerCase() === authorityId.toLowerCase()
+    ) >= 0;
+  hasRejected =
+    rejectedAuths.findIndex(
+      (id) => id.toLowerCase() === authorityId.toLowerCase()
+    ) >= 0;
 
-    console.log(hasApproved, hasRejected);
-  }
+  console.log(hasApproved, hasRejected);
+
+  if (hasApproved) authAction = "Approved";
+  else if (hasRejected) authAction = "Rejected";
+  else authAction = "No action taken";
+  const [comment, setComment] = useState({ comment: "", error: "" });
 
   const handleAuthorityAction = async (approvalStatus) => {
+    if (!comment.comment) {
+      setComment({
+        comment: "",
+        error: "Remarks must be given!",
+      });
+      return;
+    }
     setLoading(true);
     const accounts = await window.ethereum.request({
       method: "eth_requestAccounts",
@@ -37,6 +57,7 @@ const RequestItem = ({
       id,
       parseInt(distnId),
       approvalStatus,
+      comment.comment,
       {
         from: accounts[0],
       }
@@ -46,7 +67,6 @@ const RequestItem = ({
     setLoading(false);
   };
 
-  const AuthorityAction = () => {};
   return (
     <Paper className="requestItemContainer">
       <Grid container alignItems="center" className="requestItem">
@@ -56,6 +76,15 @@ const RequestItem = ({
             <br />
             {id}
           </Grid>
+          <Grid item>
+            <b>Your Response: </b> {authAction}
+          </Grid>
+          {remark && (
+            <Grid item>
+              <b>Your Remarks: </b>
+              {remark}
+            </Grid>
+          )}
           <Grid item>
             {
               {
@@ -74,6 +103,29 @@ const RequestItem = ({
               <Grid item>
                 {!hasApproved && !hasRejected && (
                   <>
+                    <br />
+                    <FormControl variant="filled">
+                      <TextField
+                        label="Comment"
+                        size="small"
+                        value={comment.comment}
+                        error={!comment.error === ""}
+                        onChange={(e) => {
+                          setComment({ comment: e.target.value, error: "" });
+                        }}
+                      />
+                      <FormHelperText className="errorTextRed">
+                        {comment.error === "" ? (
+                          ""
+                        ) : (
+                          <>
+                            <ErrorIcon fontSize="small" />
+                            &nbsp; {comment.error}
+                          </>
+                        )}
+                      </FormHelperText>
+                    </FormControl>
+                    <br />
                     <Button
                       className="buttonError"
                       onClick={() => handleAuthorityAction(2)}
