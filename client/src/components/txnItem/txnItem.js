@@ -33,7 +33,6 @@ function TxnItem(props) {
     entityId: entityLevel === "Distn. Point" ? "" : props.toEntityId,
     level: toEntityLevel,
   };
-
   console.log(QrData);
   return (
     <Grid container alignItems="center" className="txnItem">
@@ -76,19 +75,18 @@ function TxnItem(props) {
         )}
 
         <Grid item>
-          {props.statusCode === "401" ||
-            (props.statusCode === "4010" && (
-              <Chip
-                className="errorChip"
-                size="small"
-                label={
-                  props.statusCode === "401"
-                    ? "Unauthorized txn request"
-                    : "Beneficiary Authentication Failed."
-                }
-                icon={<ErrorOutlineIcon className="errorIcon" />}
-              />
-            ))}
+          {(props.statusCode === "401" || props.statusCode === "4010") && (
+            <Chip
+              className="errorChip"
+              size="small"
+              label={
+                props.statusCode === "401"
+                  ? "Unauthorized txn request"
+                  : "Beneficiary Authentication Failed."
+              }
+              icon={<ErrorOutlineIcon className="errorIcon" />}
+            />
+          )}
         </Grid>
       </Grid>
 

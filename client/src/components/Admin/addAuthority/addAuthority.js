@@ -130,8 +130,15 @@ const AddAuthority = ({
       "0x" + entity.authorityId,
       parseInt(entity.id)
     );
-
-    alert(txnResult);
+    txnResult
+      ? setSuccessSnack({
+          view: true,
+          msg: "Authority Verfied",
+        })
+      : setErrorSnack({
+          view: true,
+          msg: "Unauthorized authority",
+        });
   };
 
   return (
